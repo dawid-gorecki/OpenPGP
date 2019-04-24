@@ -1,0 +1,64 @@
+from enum import Enum
+
+class PacketFormat(Enum):
+    OLD_PACKET = 0
+    NEW_PACKET = 1
+
+class PacketType(Enum):
+    PK_ENCRYPTED_SESSION_KEY = 1
+    SIGNATURE = 2
+    SK_ENCRYPTED_SESSION_KEY = 3
+    ONEPASS_SIGNATURE = 4
+    SECRET_KEY = 5
+    PUBLIC_KEY = 6
+    SECRET_SUBKEY = 7
+    COMPRESSED_DATA = 8
+    SYM_ENCRYPTED_DATA = 9
+    MARKER = 10
+    LITERAL_DATA = 11
+    TRUST = 12
+    USER_ID = 13
+    PUBLIC_SUBKEY = 14
+    USER_ATTR = 17
+    SYM_ENCR_AND_INTEGRITY_PROTECTED_DATA = 18
+    MODIFICATION_DETECTION_CODE = 19
+
+
+OLD_TYPE_HEADER_LENGTHS = (2, 3, 5, 1)
+
+
+class PGPHeader():
+    def __init__(self, *args, **kwargs):
+        self.packet_format = None
+        self.packet_type = None
+        self.header_length = None
+        self.packet_length = None
+
+    def parse_binary(self, data):
+        if not (data[0] & 0x80):
+            raise ValueError('Not a PGP packet.')
+        
+        self.packet_format = PacketFormat((data[0] & 0x40) >> 6)
+        
+        if self.packet_format == PacketFormat.NEW_PACKET:
+            raise NotImplementedError('New packet formats currently not supported.')
+
+        elif self.packet_format == PacketFormat.OLD_PACKET:
+            self.packet_type = PacketType((data[0] & 0x3C) >> 2)
+            self.header_length = OLD_TYPE_HEADER_LENGTHS[data[0] & 0x03]
+            
+            if self.header_length == 1:
+                self.packet_length = None
+            elif self.header_length == 2:
+                self.packet_length = data[1]
+            else:
+                self.packet_length = int.from_bytes(data[1:self.header_length], byteorder='big')
+
+    def get_total_packet_length(self):
+        if self.header_length == 1:
+            raise ValueError('Packet length unknown')
+        else:
+            return self.header_length + self.packet_length
+
+
+        
