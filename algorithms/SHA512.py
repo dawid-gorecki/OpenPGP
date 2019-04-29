@@ -63,6 +63,8 @@ def Hash(msg):
     #First step: padding
     #convert 
     #append 1 to the end of the message
+    modulus64 = 2 ** 64
+
     pre = int.from_bytes(msg, "big")
     l = len(msg) * 8
     pre = (pre << 1) | 1
@@ -96,7 +98,7 @@ def Hash(msg):
         for t in range(16):
             W[t] = M[i][t]
         for t in range(16, 80):
-            W[t] = (deltaOne(W[t-2]) + W[t-7] + deltaZero(W[t-15]) + W[t-16]) % 2 ** 64     
+            W[t] = (deltaOne(W[t-2]) + W[t-7] + deltaZero(W[t-15]) + W[t-16]) % modulus64     
         a = H[0]
         b = H[1]
         c = H[2]
@@ -106,25 +108,25 @@ def Hash(msg):
         g = H[6]
         h = H[7]
         for t in range(80):
-            TempVar1 = (h + sigmaOne(e) + Ch(e, f, g) + k[t] + W[t]) % (2**64)
-            TempVar2 = (sigmaZero(a) + Maj(a, b, c)) % (2 ** 64)
+            TempVar1 = (h + sigmaOne(e) + Ch(e, f, g) + k[t] + W[t]) % (modulus64)
+            TempVar2 = (sigmaZero(a) + Maj(a, b, c)) % (modulus64)
             h = g
             g = f
             f = e
-            e = (d + TempVar1) % (2 ** 64)
+            e = (d + TempVar1) % (modulus64)
             d = c
             c = b
             b = a
-            a = (TempVar1 + TempVar2) % (2 ** 64)
+            a = (TempVar1 + TempVar2) % (modulus64)
 
-        H[0] = (a + H[0]) % 2 ** 64
-        H[1] = (b + H[1]) % 2 ** 64
-        H[2] = (c + H[2]) % 2 ** 64
-        H[3] = (d + H[3]) % 2 ** 64
-        H[4] = (e + H[4]) % 2 ** 64
-        H[5] = (f + H[5]) % 2 ** 64
-        H[6] = (g + H[6]) % 2 ** 64
-        H[7] = (h + H[7]) % 2 ** 64
+        H[0] = (a + H[0]) % modulus64
+        H[1] = (b + H[1]) % modulus64
+        H[2] = (c + H[2]) % modulus64
+        H[3] = (d + H[3]) % modulus64
+        H[4] = (e + H[4]) % modulus64
+        H[5] = (f + H[5]) % modulus64
+        H[6] = (g + H[6]) % modulus64
+        H[7] = (h + H[7]) % modulus64
 
     #concatenate words and return result
     result = H[0]
