@@ -60,5 +60,39 @@ class PGPHeader():
         else:
             return self.header_length + self.packet_length
 
+    def to_bytes(self):
+        if self.packet_format is None:
+            raise ValueError('Packet format must be set.')
+        if self.packet_format == PacketFormat.NEW_PACKET:
+            raise NotImplementedError('New packet formats not yet implemented.')
+        if self.packet_type is None:
+            raise ValueError('Packet type must be set.')
+        if self.header_length is None:
+            raise ValueError('Header length must be set')
+        if self.header_length != 1 and self.packet_length is None:
+            raise ValueError('If header length is known packet length must be set.')
 
+        header_first_byte = 0x80
+
+        if not isinstance(self.packet_type, PacketType):
+            raise ValueError('Packet type must be of type PacketType')
+
+        header_first_byte = header_first_byte | (self.packet_type.value << 2)
+
+
+        if not (self.header_length in OLD_TYPE_HEADER_LENGTHS):
+            raise ValueError('Length of the packet must have precise length.')
+
+        header_first_byte = header_first_byte | (OLD_TYPE_HEADER_LENGTHS.index(self.header_length))
+
+        retVal = bytearray()
+
+        retVal.append(header_first_byte)
+
+        if self.header_length != 1:
+            additional_bytes = int.to_bytes(self.packet_length, byteorder='big', length=self.header_length-1)
+            for i in additional_bytes:
+                retVal.append(i)
+
+        return retVal
         
