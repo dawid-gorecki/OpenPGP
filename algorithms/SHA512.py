@@ -27,6 +27,7 @@ def deltaOne(x):
     return (ror(x, 19) ^ ror(x, 61) ^ (x >> 6))
 
 #Calculate a SHA-512 hash of the input bytes or byterray object
+@profile
 def Hash(msg):
 
     #initialize hash values
@@ -87,11 +88,9 @@ def Hash(msg):
 
     #convert the padded data to a bytes object
     #split each 1024-bit block into 16 64-bit words
-    #not sure which way of writing the assignment to N looks neater, left one commented out
     M = [[0 for x in range(16)]for y in range(N)]
     for i in range(N):
         for j in range(16):
-            #M[N - i - 1][j] = (pre >> ((1024 - 64 * (j + 1)) + 1024 * i)) & 0xFFFFFFFFFFFFFFFF
             M[i][j] = int.from_bytes(msg[8 * j + i * 128: 8 * (j+1) + i * 128], "big") & 0xFFFFFFFFFFFFFFFF
     W = [0 for x in range(80)]
     for i in range(N):
