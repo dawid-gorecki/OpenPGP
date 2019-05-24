@@ -141,7 +141,7 @@ def keySchedule(key, encrypt = True):
     return K
 
 def encryptBlock(msg, keys: list):
-    return processBlock(processBlock(processBlock(msg, keys[1], True), keys[1], False), keys[2], True)
+    return processBlock(processBlock(processBlock(msg, keys[0], True), keys[1], False), keys[2], True)
 def decryptBlock(msg, keys: list):
     return processBlock(processBlock(processBlock(msg, keys[2], False), keys[1], True), keys[0], False)
 
@@ -185,7 +185,7 @@ def processBlock(msg, key, encrypt = True):
         C = (C << 1) | (L & (1 << (64 - i))) >> (64 - i)
     return C
 
-def CFBEncrypt(msg: bytes, keys: list):
+def CFBEncrypt(msg: bytes, keys: list, IV = 0, pgpMode = True):
     #set feedback register to Initialization Vector which is 0
     feedbackRegister = 0
     #l = ceil(len(msg)/8)
@@ -196,111 +196,136 @@ def CFBEncrypt(msg: bytes, keys: list):
         if len(msg[i*8:(i+1)*8]) == 0:
             break
         msgFromBytes.append(toAppend)
+    if pgpMode == True:
 
-    #each entry of the list holds a single octet
-    cipherBlocks = [0 for i in range(len(msg)+10)]
-    randomPrefix = secrets.randbits(64)
-    #repeat last two octets of random data
-    randomPrefix = (randomPrefix << 16) | (randomPrefix & 0xFFFF) 
-    #print(hex(randomPrefix))
-    #encrypt FR to produce FRE (encryption of all-zero value)
-    feedbackRegisterEncrypted = encryptBlock(feedbackRegister, keys)
-    #XOR FRE with first 8 octets of random data producing first 8 octets of ciphertext
-    feedbackRegisterEncrypted = feedbackRegisterEncrypted ^ ((randomPrefix & 0xFFFFFFFFFFFFFFFF0000) >> 16)
-    feedbackRegister = 0
-    for i in range(8):
-        cipherBlocks[i] = (feedbackRegisterEncrypted & (0xFF << (56 - i * 8))) >> (56 - i * 8)
-        #print(hex(cipherBlocks[i]))
-        feedbackRegister |= (cipherBlocks[i] << (56 - i * 8))
-
-    feedbackRegisterEncrypted = encryptBlock(feedbackRegister, keys)
-    repeatedOctets = ((feedbackRegisterEncrypted & (0xFFFF << 48))>>48) ^ (randomPrefix & 0xFFFF)
-    #print(hex(randomPrefix & 0xFFFF))
-    #cipherBlocks[8] = ((feedbackRegisterEncrypted & (0xFF << 56) >> 56) ^ (randomPrefix & (0xFFFF))) >> 8 
-    #cipherBlocks[9] = ((feedbackRegisterEncrypted & (0xFF << 48) >> 48) ^ (randomPrefix & 0xFF)) 
-    cipherBlocks[8] = (repeatedOctets & 0xFF00) >> 8
-    cipherBlocks[9] = repeatedOctets & 0xFF
-
-    feedbackRegister = 0
-    for i in range(8):
-        feedbackRegister |= (cipherBlocks[i+2] << (56 - i * 8))
-    feedbackRegisterEncrypted = encryptBlock(feedbackRegister, keys)
-    #print(hex(msgFromBytes[0]))
-    feedbackRegisterEncrypted ^= msgFromBytes[0]
-    for i in range(8):
-        cipherBlocks[i+10] = (feedbackRegisterEncrypted & (0xFF << (56 - i * 8))) >> (56 - i * 8)
-        #print(hex(cipherBlocks[i+10]))
-    feedbackRegister = 0
-    
-    if len(msgFromBytes) > 1:
-        for j in range(8):
-            feedbackRegister |= (cipherBlocks[10+j] << (56 - j * 8))
+        #each entry of the list holds a single octet
+        cipherBlocks = [0 for i in range(len(msg)+10)]
+        randomPrefix = secrets.randbits(64)
+        #repeat last two octets of random data
+        randomPrefix = (randomPrefix << 16) | (randomPrefix & 0xFFFF) 
+        #print(hex(randomPrefix))
+        #encrypt FR to produce FRE (encryption of all-zero value)
         feedbackRegisterEncrypted = encryptBlock(feedbackRegister, keys)
-        feedbackRegisterEncrypted ^= msgFromBytes[1]
-        #print(hex(feedbackRegisterEncrypted))
-        for j in range(8):
-            cipherBlocks[j+18] = (feedbackRegisterEncrypted & (0xFF << (56 - j * 8))) >> (56 - j * 8)
-            #print(hex(cipherBlocks[j+18] << (56 - j*8)))
-        for i in range(len(msgFromBytes)-2):
-            feedbackRegister = 0
+        #XOR FRE with first 8 octets of random data producing first 8 octets of ciphertext
+        feedbackRegisterEncrypted = feedbackRegisterEncrypted ^ ((randomPrefix & 0xFFFFFFFFFFFFFFFF0000) >> 16)
+        feedbackRegister = 0
+        for i in range(8):
+            cipherBlocks[i] = (feedbackRegisterEncrypted & (0xFF << (56 - i * 8))) >> (56 - i * 8)
+            #print(hex(cipherBlocks[i]))
+            feedbackRegister |= (cipherBlocks[i] << (56 - i * 8))
+
+        feedbackRegisterEncrypted = encryptBlock(feedbackRegister, keys)
+        repeatedOctets = ((feedbackRegisterEncrypted & (0xFFFF << 48))>>48) ^ (randomPrefix & 0xFFFF)
+        #print(hex(randomPrefix & 0xFFFF))
+        #cipherBlocks[8] = ((feedbackRegisterEncrypted & (0xFF << 56) >> 56) ^ (randomPrefix & (0xFFFF))) >> 8 
+        #cipherBlocks[9] = ((feedbackRegisterEncrypted & (0xFF << 48) >> 48) ^ (randomPrefix & 0xFF)) 
+        cipherBlocks[8] = (repeatedOctets & 0xFF00) >> 8
+        cipherBlocks[9] = repeatedOctets & 0xFF
+
+        feedbackRegister = 0
+        for i in range(8):
+            feedbackRegister |= (cipherBlocks[i+2] << (56 - i * 8))
+        feedbackRegisterEncrypted = encryptBlock(feedbackRegister, keys)
+        #print(hex(msgFromBytes[0]))
+        feedbackRegisterEncrypted ^= msgFromBytes[0]
+        for i in range(8):
+            cipherBlocks[i+10] = (feedbackRegisterEncrypted & (0xFF << (56 - i * 8))) >> (56 - i * 8)
+        feedbackRegister = 0
+
+        if len(msgFromBytes) > 1:
             for j in range(8):
-                feedbackRegister |= (cipherBlocks[(8*i+18) + j] << (56 - j * 8))
+                feedbackRegister |= (cipherBlocks[10+j] << (56 - j * 8))
             feedbackRegisterEncrypted = encryptBlock(feedbackRegister, keys)
-            feedbackRegisterEncrypted ^= msgFromBytes[i + 2]
+            feedbackRegisterEncrypted ^= msgFromBytes[1]
             for j in range(8):
-                cipherBlocks[8*(i+1) + 18 + j] = (feedbackRegisterEncrypted & (0xFF << (56 - j * 8))) >> (56 - j * 8)
+                cipherBlocks[j+18] = (feedbackRegisterEncrypted & (0xFF << (56 - j * 8))) >> (56 - j * 8)
+            for i in range(len(msgFromBytes)-2):
+                feedbackRegister = 0
+                for j in range(8):
+                    feedbackRegister |= (cipherBlocks[(8*i+18) + j] << (56 - j * 8))
+                feedbackRegisterEncrypted = encryptBlock(feedbackRegister, keys)
+                feedbackRegisterEncrypted ^= msgFromBytes[i + 2]
+                for j in range(8):
+                    cipherBlocks[8*(i+1) + 18 + j] = (feedbackRegisterEncrypted & (0xFF << (56 - j * 8))) >> (56 - j * 8)
+    else:
+        cipherBlocks = [0 for i in range(len(msg))]
+        feedbackRegisterEncrypted = encryptBlock(IV, keys)
+        feedbackRegisterEncrypted = feedbackRegisterEncrypted ^ msgFromBytes[0]
+        for i in range(8):
+            cipherBlocks[i] = (feedbackRegisterEncrypted & (0xFF << (56 - i * 8))) >> (56 - i * 8)
+        for i in range(len(msgFromBytes)-1):
+            feedbackRegister = feedbackRegisterEncrypted
+            feedbackRegisterEncrypted = encryptBlock(feedbackRegister, keys)
+            feedbackRegisterEncrypted ^= msgFromBytes[i+1]
+            for j in range(8):
+                cipherBlocks[8*(i+1) + j] = (feedbackRegisterEncrypted & (0xFF << (56 - j * 8))) >> (56 - j * 8)
     return cipherBlocks
 
-def CFBDecrypt(msg: bytes, keys: list):
-    l = len(msg)
-    msgFromBytes = []
-    toAppend = (int).from_bytes(msg[0:8], "big")
-    #print(hex(toAppend))
-    msgFromBytes.append(toAppend)
-    toAppend = (int).from_bytes(msg[8 : 10], "big")
-    msgFromBytes.append(toAppend)
-    #print(hex(toAppend))
-    for i in range(ceil(len(msg)/8)-2):
-        toAppend = (int).from_bytes(msg[i * 8 + 10: (i + 1) * 8 + 10 ], "big")
+def CFBDecrypt(msg: bytes, keys: list, IV = 0, pgpMode = True):
+    if pgpMode == True:
+        l = len(msg)
+        msgFromBytes = []
+        toAppend = (int).from_bytes(msg[0:8], "big")
         #print(hex(toAppend))
-        if len(msg[i*8:(i+1)*8]) == 0:
-            break
         msgFromBytes.append(toAppend)
-    cipherBlocks = [0 for i in range(l)]
-    
-    feedbackRegister = 0
-    feedbackRegisterEncrypted = encryptBlock(feedbackRegister, keys)
-    feedbackRegisterEncrypted ^= msgFromBytes[0]
-    for j in range(8):
-        cipherBlocks[j] = (feedbackRegisterEncrypted & (0xFF << (56 - j * 8))) >> (56 - j * 8)
-    feedbackRegister = msgFromBytes[0]
-    feedbackRegisterEncrypted = encryptBlock(feedbackRegister, keys)
-    cipherBlocks[8] = ((feedbackRegisterEncrypted & (0xFF << 56) ) ^ (msgFromBytes[1] << 48)) >> 56
-    cipherBlocks[9] = (((feedbackRegisterEncrypted & (0xFF << 48) ) ^ (msgFromBytes[1] << 48)) >> 48) & 0xFF
-    
-    #print(hex(cipherBlocks[8]))
-    #print(hex(cipherBlocks[9]))
-    feedbackRegister = 0
-    feedbackRegister = (msgFromBytes[0] & 0xFFFFFFFFFFFF)
-    feedbackRegister = (feedbackRegister << 16) | msgFromBytes[1] 
-    #feedbackRegister = (feedbackRegister << 8) | cipherBlocks[9]
-    #print(hex(feedbackRegister))
-    feedbackRegisterEncrypted = encryptBlock(feedbackRegister, keys)
-    feedbackRegisterEncrypted ^= msgFromBytes[2]
-    for i in range(8):
-        cipherBlocks[i+10] = (feedbackRegisterEncrypted & (0xFF << (56 - i * 8))) >> (56 - i * 8)
-        #print(hex(cipherBlocks[i+10]))
-    #print(len(msgFromBytes))
-    if len(msgFromBytes) > 3:
-        feedbackRegister = msgFromBytes[2]
+        toAppend = (int).from_bytes(msg[8 : 10], "big")
+        msgFromBytes.append(toAppend)
+        #print(hex(toAppend))
+        for i in range(ceil(len(msg)/8)-2):
+            toAppend = (int).from_bytes(msg[i * 8 + 10: (i + 1) * 8 + 10 ], "big")
+            if len(msg[i*8:(i+1)*8]) == 0:
+                break
+            msgFromBytes.append(toAppend)
+        cipherBlocks = [0 for i in range(l)]
         
-        for i in range(len(msgFromBytes)-3):
+        feedbackRegister = 0
+        feedbackRegisterEncrypted = encryptBlock(feedbackRegister, keys)
+        feedbackRegisterEncrypted ^= msgFromBytes[0]
+        for j in range(8):
+            cipherBlocks[j] = (feedbackRegisterEncrypted & (0xFF << (56 - j * 8))) >> (56 - j * 8)
+        feedbackRegister = msgFromBytes[0]
+        feedbackRegisterEncrypted = encryptBlock(feedbackRegister, keys)
+        cipherBlocks[8] = ((feedbackRegisterEncrypted & (0xFF << 56) ) ^ (msgFromBytes[1] << 48)) >> 56
+        cipherBlocks[9] = (((feedbackRegisterEncrypted & (0xFF << 48) ) ^ (msgFromBytes[1] << 48)) >> 48) & 0xFF
+        
+        #print(hex(cipherBlocks[8]))
+        #print(hex(cipherBlocks[9]))
+        feedbackRegister = 0
+        feedbackRegister = (msgFromBytes[0] & 0xFFFFFFFFFFFF)
+        feedbackRegister = (feedbackRegister << 16) | msgFromBytes[1] 
+        feedbackRegisterEncrypted = encryptBlock(feedbackRegister, keys)
+        feedbackRegisterEncrypted ^= msgFromBytes[2]
+        for i in range(8):
+            cipherBlocks[i+10] = (feedbackRegisterEncrypted & (0xFF << (56 - i * 8))) >> (56 - i * 8)
+        if len(msgFromBytes) > 3:
+            feedbackRegister = msgFromBytes[2]
+            
+            for i in range(len(msgFromBytes)-3):
+                feedbackRegisterEncrypted = encryptBlock(feedbackRegister, keys)
+                feedbackRegisterEncrypted ^= msgFromBytes[i+3]
+                for j in range(8):
+                    cipherBlocks[8 * i + j + 18 ] = (feedbackRegisterEncrypted & (0xFF << (56 - j * 8))) >> (56 - j * 8)
+                feedbackRegister = msgFromBytes[i+3]
+    else:
+        feedbackRegister = 0
+        msgFromBytes = []
+        #convert input into 64 bit blocks
+        for i in range(len(msg)):
+            toAppend = (int).from_bytes(msg[i * 8: (i + 1) * 8], "big")
+            if len(msg[i*8:(i+1)*8]) == 0:
+                break
+            msgFromBytes.append(toAppend)
+        cipherBlocks = [0 for i in range(len(msg))]
+        feedbackRegisterEncrypted = encryptBlock(IV, keys)
+        feedbackRegisterEncrypted = feedbackRegisterEncrypted ^ msgFromBytes[0]
+        for i in range(8):
+            cipherBlocks[i] = (feedbackRegisterEncrypted & (0xFF << (56 - i * 8))) >> (56 - i * 8)
+        for i in range(len(msgFromBytes)-1):
+            feedbackRegister = msgFromBytes[i]
             feedbackRegisterEncrypted = encryptBlock(feedbackRegister, keys)
-            feedbackRegisterEncrypted ^= msgFromBytes[i+3]
-            #print(hex(feedbackRegisterEncrypted))
+            feedbackRegisterEncrypted ^= msgFromBytes[i+1]
             for j in range(8):
-                cipherBlocks[8 * i + j + 18 ] = (feedbackRegisterEncrypted & (0xFF << (56 - j * 8))) >> (56 - j * 8)
-            feedbackRegister = msgFromBytes[i+3]
+                cipherBlocks[8*(i+1) + j] = (feedbackRegisterEncrypted & (0xFF << (56 - j * 8))) >> (56 - j * 8)
     return cipherBlocks
     
 

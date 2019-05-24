@@ -80,29 +80,12 @@ def Hash(msg: bytearray):
         zeros = 0
     #amount of bytes objects to append to msg
     toAppend = math.ceil(zeros/8)
-    #pre = pre << zeros + 128
-    #append l to the temporary variable pre
-    #pre |= l
+    
     msg.extend(bytearray(toAppend))
     msg.extend(l.to_bytes(16, "big"))  
     N = math.ceil(len(msg)/128)
     #parsing the message
-    #if bit_length is smaller than this value we need to explicitly add zero bits
-    #N = math.ceil(pre.bit_length()/1024)
-    #if pre.bit_length() < 1023:
-        #msg = msg + pre.to_bytes(math.ceil(pre.bit_length()/8), "big")
-        #N = math.ceil(len(msg*8)/1024)
-    #else:
-    #the message including padding will be parsed into N 1024-bit blocks
-    #    msg = pre.to_bytes(N * 128 , "big")
-
-    #convert the padded data to a bytes object
-    #split each 1024-bit block into 16 64-bit words
-    #M = [[0 for x in range(16)]for y in range(N)]
-    #M = M = [[0 for x in range(16)]for y in range(N)]
-    #for i in range(N):
-     #   for j in range(16):
-      #      M[i][j] = int.from_bytes(msg[8 * j + i * 128: 8 * (j+1) + i * 128], "big") & 0xFFFFFFFFFFFFFFFF
+    
     W = [0 for x in range(80)]
     for i in range(N):
         for t in range(16):
