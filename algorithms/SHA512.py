@@ -27,7 +27,8 @@ def deltaOne(x):
     return (ror(x, 19) ^ ror(x, 61) ^ (x >> 6))
 
 #Calculate a SHA-512 hash of the input bytes or byterray object
-def Hash(msg):
+#@profile
+def Hash(msg: bytearray):
 
     #initialize hash values
     #these initial values are defined as the first sixty-four bits of the
@@ -65,38 +66,30 @@ def Hash(msg):
     #append 1 to the end of the message
     modulus64 = 2 ** 64
 
-    pre = int.from_bytes(msg, "big")
+    #pre = int.from_bytes(msg, "big")
     l = len(msg) * 8
-    pre = (pre << 1) | 1
+    #pre = (pre << 1) | 1
+    msg.append(0x80)
     #calculate amount of zeros to append including room for 128-bit representation of l
     zeros = 896 - 1 - l % 1024
     if zeros < 0:
         zeros += 1024
-    pre = pre << zeros + 128
-    #append l to the temporary variable pre
-    pre |= l
-    #parsing the message
-    #if bit_length is smaller than this value we need to explicitly add zero bits
-    N = math.ceil(pre.bit_length()/1024)
-    if pre.bit_length() < 1023:
-        msg = msg + pre.to_bytes(math.ceil(pre.bit_length()/8), "big")
-        N = math.ceil(len(msg*8)/1024)
+    if zeros >= 7:
+        zeros -= 7
     else:
-    #the message including padding will be parsed into N 1024-bit blocks
-        msg = pre.to_bytes(N * 128 , "big")
-
-    #convert the padded data to a bytes object
-    #split each 1024-bit block into 16 64-bit words
-    #not sure which way of writing the assignment to N looks neater, left one commented out
-    M = [[0 for x in range(16)]for y in range(N)]
-    for i in range(N):
-        for j in range(16):
-            #M[N - i - 1][j] = (pre >> ((1024 - 64 * (j + 1)) + 1024 * i)) & 0xFFFFFFFFFFFFFFFF
-            M[i][j] = int.from_bytes(msg[8 * j + i * 128: 8 * (j+1) + i * 128], "big") & 0xFFFFFFFFFFFFFFFF
+        zeros = 0
+    #amount of bytes objects to append to msg
+    toAppend = math.ceil(zeros/8)
+    
+    msg.extend(bytearray(toAppend))
+    msg.extend(l.to_bytes(16, "big"))  
+    N = math.ceil(len(msg)/128)
+    #parsing the message
+    
     W = [0 for x in range(80)]
     for i in range(N):
         for t in range(16):
-            W[t] = M[i][t]
+            W[t] = int.from_bytes(msg[8 * t + i * 128: 8 * (t+1) + i * 128], "big") & 0xFFFFFFFFFFFFFFFF
         for t in range(16, 80):
             W[t] = (deltaOne(W[t-2]) + W[t-7] + deltaZero(W[t-15]) + W[t-16]) % modulus64     
         a = H[0]
