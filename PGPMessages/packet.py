@@ -1,6 +1,7 @@
 from .header import PGPHeader, PacketType
 from .algo_constants import *
 from .key_types import *
+from .signature_types import *
 from enum import Enum
 import time
 
@@ -180,6 +181,7 @@ class PGPSignaturePacket(PGPPacket):
             offset = self.header.header_length + 4
             self.hashed_subpacket_length = int.from_bytes(self.raw_data[offset: offset + 2], byteorder = 'big')
             offset = offset + 2
+
             #currently ignoring subpackets
             self.hashed_subpacket_data_raw = self.raw_data[offset:offset + self.hashed_subpacket_length]
             offset += self.hashed_subpacket_length
@@ -189,6 +191,24 @@ class PGPSignaturePacket(PGPPacket):
             offset += self.unhashed_subpacket_length
             self.hashed_value_left_bits = self.raw_data[offset: offset+2]
             offset += 2
+            self.signature = DSA_Signature()
+            self.signature.parse_binary(self.raw_data[offset:])
+        else:
+            self.header = None
+            self.raw_data = None
+            self.version = None
+            self.sig_type = None
+            self.pub_key_algo = None
+            self.hash_algo = None
+            self.hashed_subpacket_length = None
+            self.hashed_subpacket_data_raw = None
+            self.unhashed_subpacket_length = None
+            self.unhashed_subpacket_data_raw = None
+            self.hashed_value_left_bits = None
+            self.signature = None
+
+    def verify(self, data_packet, key):
+        pass
 
 class LiteralDataFormat(Enum):
     ''' Literal data packets data format constants. '''
