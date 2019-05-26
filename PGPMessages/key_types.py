@@ -2,8 +2,8 @@ import math
 
 class DSAPublicKey():
     def __init__(self):
-        self.r_bits = None
-        self.r_value = None
+        self.p_bits = None
+        self.p_value = None
         self.q_bits = None
         self.q_value = None
         self.g_bits = None
@@ -12,11 +12,11 @@ class DSAPublicKey():
         self.y_value = None
 
     def parse_binary(self, binary_data):
-        self.r_bits = int.from_bytes(binary_data[0:2], byteorder='big')
+        self.p_bits = int.from_bytes(binary_data[0:2], byteorder='big')
         offset = 2
-        r_bytes = math.ceil(self.r_bits / 8)
-        self.r_value = int.from_bytes(binary_data[offset : offset + r_bytes], byteorder='big')
-        offset += r_bytes
+        p_bytes = math.ceil(self.p_bits / 8)
+        self.p_value = int.from_bytes(binary_data[offset : offset + p_bytes], byteorder='big')
+        offset += p_bytes
 
         self.q_bits = int.from_bytes(binary_data[offset: offset + 2], byteorder='big')
         q_bytes = math.ceil(self.q_bits / 8)
@@ -36,14 +36,14 @@ class DSAPublicKey():
         self.y_value = int.from_bytes(binary_data[offset:offset+y_bytes], byteorder='big')
 
         #return offset
-        return r_bytes + q_bytes + g_bytes + y_bytes + 8
+        return p_bytes + q_bytes + g_bytes + y_bytes + 8
 
     def key_total_length(self):
         bytes_needed = lambda a: math.ceil(a / 8)
         #length of all length fields
         total_length = 8
         #length of values
-        total_length += bytes_needed(self.r_bits) + bytes_needed(self.q_bits)
+        total_length += bytes_needed(self.p_bits) + bytes_needed(self.q_bits)
         total_length += bytes_needed(self.g_bits)
         total_length += bytes_needed(self.y_bits)
         
@@ -53,8 +53,8 @@ class DSAPublicKey():
         bytes_needed = lambda a: math.ceil(a / 8)
         #r bits and r
         byte_return = bytearray()
-        byte_return += self.r_bits.to_bytes(length=2, byteorder = 'big')
-        byte_return += self.r_value.to_bytes(length=bytes_needed(self.r_bits), byteorder = 'big')
+        byte_return += self.p_bits.to_bytes(length=2, byteorder = 'big')
+        byte_return += self.p_value.to_bytes(length=bytes_needed(self.p_bits), byteorder = 'big')
 
         #number of q bits and q value
         byte_return += self.q_bits.to_bytes(length=2, byteorder = 'big')

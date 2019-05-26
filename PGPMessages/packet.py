@@ -2,6 +2,8 @@ from .header import PGPHeader, PacketType
 from .algo_constants import *
 from .key_types import *
 from .signature_types import *
+from algorithms.DSA import Verify, Hash
+import hashlib
 from enum import Enum
 import time
 
@@ -183,6 +185,7 @@ class PGPOnePassSignaturePacket(PGPPacket):
         packet_length += 8
         #nested
         packet_length += 1
+        self.header.set_length(packet_length)
 
     def to_bytes(self):
         if self.header is None:
@@ -249,6 +252,7 @@ class PGPSignaturePacket(PGPPacket):
             #currently ignoring subpackets
             self.hashed_subpacket_data_raw = self.raw_data[offset:offset + self.hashed_subpacket_length]
             offset += self.hashed_subpacket_length
+            self.test = offset
             self.unhashed_subpacket_length = int.from_bytes(self.raw_data[offset:offset+2], byteorder = 'big')
             offset += 2
             self.unhashed_subpacket_data_raw = self.raw_data[offset:offset + self.unhashed_subpacket_length]
@@ -272,6 +276,28 @@ class PGPSignaturePacket(PGPPacket):
             self.signature = None
 
     def verify(self, data_packet, key):
+        if not isinstance(data_packet, PGPLiteralDataPacket):
+            raise TypeError('Data packet must be of literal data type.')
+
+        if not isinstance(key, DSAPublicKey):
+            raise TypeError('Key must be of secret key type.')
+
+        data_to_verify = bytearray()
+        data_to_verify += data_packet.file_content
+        data_to_verify += self.version.to_bytes(length=1, byteorder='big')
+        data_to_verify += self.sig_type.value.to_bytes(length=1, byteorder='big')
+        data_to_verify += self.pub_key_algo.value.to_bytes(length=1, byteorder='big')
+        data_to_verify += self.hash_algo.value.to_bytes(length=1, byteorder='big')
+        data_to_verify += self.hashed_subpacket_length.to_bytes(length=2, byteorder='big')
+        data_to_verify += self.hashed_subpacket_data_raw
+        hash_len = self.hashed_subpacket_length + 6
+        data_to_verify += b'\x04\xff'
+        data_to_verify += hash_len.to_bytes(length=4, byteorder='big')
+
+        return Verify(data_to_verify, key.p_value, key.q_value, key.g_value,
+            self.signature.signed_r, self.signature.signed_s, key.y_value, key.q_bits)
+
+    def generate_onepass(self):
         pass
         
 ###############################################################################
