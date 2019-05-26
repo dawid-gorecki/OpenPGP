@@ -5,6 +5,10 @@ from .signature_types import *
 from enum import Enum
 import time
 
+###############################################################################
+#
+###############################################################################
+
 class PGPPacket():
     ''' PGP Packet base class. '''
     def __init__(self, binary_data = None):
@@ -16,6 +20,10 @@ class PGPPacket():
             self.header.parse_binary(binary_data)
             self.total_length = self.header.get_total_packet_length()
             self.raw_data = binary_data[0 : self.total_length]
+
+###############################################################################
+#
+###############################################################################
 
 class SignatureType(Enum):
     BINARY_DOC = 0x00
@@ -33,6 +41,10 @@ class SignatureType(Enum):
     CERT_REVOC_SIG = 0x30
     TIMESTAMP_SIG = 0x40
     THIRD_PARTY_CONFIRM_SIG = 0x50
+
+###############################################################################
+#
+###############################################################################
 
 class PGPPublicKeyPacket(PGPPacket):
     def __init__(self, packet = None):
@@ -76,9 +88,59 @@ class PGPPublicKeyPacket(PGPPacket):
             self.public_key_algo = None
             self.key = None
 
+###############################################################################
+#
+###############################################################################
+
 class PGPSecretKeyPacket(PGPPacket):
     def __init__(self, packet = None):
-        pass
+        if packet is not None:
+            if packet.header.packet_type != PacketType.SECRET_KEY:
+                raise ValueError('Packet must be of secret key type.')
+            
+            self.header = packet.header
+            self.raw_data = packet.raw_data
+
+            offset = self.header.header_length
+
+            self.version = self.raw_data[offset]
+            offset += 1
+            if self.version != 4:
+                raise NotImplementedError('Only version 4 packets now implemented.')
+
+            self.time_created = int.from_bytes(self.raw_data[offset:offset+4], byteorder='big')
+            offset += 4
+
+            self.public_key_algo = PublicKeyAlgo(self.raw_data[offset])
+            offset += 1
+
+            public_key = None
+
+            if self.public_key_algo == PublicKeyAlgo.DSA:
+                public_key = DSAPublicKey()
+                offset += public_key.parse_binary(self.raw_data[offset:])
+            else:
+                raise NotImplementedError('Only DSA keys currently implemented.')
+            
+            self.s2k_convention = self.raw_data[offset]
+            if self.s2k_convention != 0:
+                raise NotImplementedError('No secret key encryption supported.')
+
+            offset += 1
+
+            self.secret_key = DSASecretKey()
+            self.secret_key.pub_key = public_key
+            offset += self.secret_key.parse_binary(self.raw_data[offset:])
+            
+            if len(self.raw_data[offset:]) != 2:
+                raise ValueError('Checksum too long.')
+
+            self.checksum = int.from_bytes(self.raw_data[offset:], byteorder='big')
+
+
+###############################################################################
+#
+###############################################################################
 
 class PGPOnePassSignaturePacket(PGPPacket):
     def __init__(self, packet = None):
@@ -161,7 +223,9 @@ class PGPOnePassSignaturePacket(PGPPacket):
 
         return return_bytes
 
-            
+###############################################################################
+# 
+###############################################################################            
 
 class PGPSignaturePacket(PGPPacket):
     def __init__(self, packet = None):
@@ -209,12 +273,20 @@ class PGPSignaturePacket(PGPPacket):
 
     def verify(self, data_packet, key):
         pass
+        
+###############################################################################
+#
+###############################################################################
 
 class LiteralDataFormat(Enum):
     ''' Literal data packets data format constants. '''
     BINARY_FORMAT = 0x62
     TEXT_FORMAT = 0x74
     UNICODE_FORMAT = 0x75
+
+###############################################################################
+#
+###############################################################################
 
 class PGPLiteralDataPacket(PGPPacket):
     def __init__(self, packet = None):

@@ -35,6 +35,20 @@ class DSAPublicKey():
         offset += 2
         self.y_value = int.from_bytes(binary_data[offset:offset+y_bytes], byteorder='big')
 
+        #return offset
+        return r_bytes + q_bytes + g_bytes + y_bytes + 8
+
+    def key_total_length(self):
+        bytes_needed = lambda a: math.ceil(a / 8)
+        #length of all length fields
+        total_length = 8
+        #length of values
+        total_length += bytes_needed(self.r_bits) + bytes_needed(self.q_bits)
+        total_length += bytes_needed(self.g_bits)
+        total_length += bytes_needed(self.y_bits)
+        
+        return total_length
+
     def to_bytes(self):
         bytes_needed = lambda a: math.ceil(a / 8)
         #r bits and r
@@ -58,4 +72,14 @@ class DSAPublicKey():
 
 class DSASecretKey():
     def __init__(self):
-        pass
+        self.pub_key = None
+        self.x_bits = None
+        self.x_value = None
+
+    def parse_binary(self, binary_data):
+        self.x_bits = int.from_bytes(binary_data[0:2], byteorder='big')
+        x_bytes = math.ceil(self.x_bits / 8)
+        self.x_value = int.from_bytes(binary_data[2:2+x_bytes], byteorder='big')
+
+        return x_bytes + 2
+
