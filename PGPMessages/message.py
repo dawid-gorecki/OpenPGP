@@ -69,6 +69,14 @@ class PGPMessage():
 
         return secret_key
 
+    def unpack_message(self, filename):
+        for packet in self.packets:
+            if packet.header.packet_type == PacketType.LITERAL_DATA:
+                with open(filename, 'wb') as outfile:
+                    outfile.write(packet.file_content)
+                break
+
+
     def verify_message(self, key_msg):
 
         if not isinstance(key_msg, PGPMessage):
@@ -90,5 +98,8 @@ class PGPMessage():
                 print("Message verified succesfully.")
             else:
                 print("Message verification failed.")
+
+            return verified
+            
         else:
             raise ValueError('Message contains no signature or no data.')
