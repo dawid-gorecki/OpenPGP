@@ -1,4 +1,4 @@
-from DSA import Verify
+from .DSA import Verify
 
 import re
 import os

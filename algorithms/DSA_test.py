@@ -1,4 +1,4 @@
-from DSA import Sign
+from .DSA import Sign
 
 import re
 import os

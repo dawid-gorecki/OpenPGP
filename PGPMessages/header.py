@@ -1,4 +1,5 @@
 from enum import Enum
+import math
 
 class PacketFormat(Enum):
     OLD_PACKET = 0
@@ -29,7 +30,7 @@ OLD_TYPE_HEADER_LENGTHS = (2, 3, 5, 1)
 
 class PGPHeader():
     def __init__(self, *args, **kwargs):
-        self.packet_format = None
+        self.packet_format = PacketFormat.OLD_PACKET
         self.packet_type = None
         self.header_length = None
         self.packet_length = None
@@ -53,6 +54,21 @@ class PGPHeader():
                 self.packet_length = data[1]
             else:
                 self.packet_length = int.from_bytes(data[1:self.header_length], byteorder='big')
+
+    def set_length(self, packet_length):
+        if packet_length > 2 ** 32:
+            raise ValueError('Packet too long.')
+
+        self.packet_length = packet_length
+        
+        packet_length_min_bits = math.ceil(math.log2(packet_length))
+        packet_length_min_bytes = math.ceil(packet_length_min_bits / 8)
+        
+        if packet_length_min_bytes == 3:
+            packet_length_min_bytes = 4
+
+        self.header_length = packet_length_min_bytes + 1
+        
 
     def get_total_packet_length(self):
         if self.header_length == 1:
@@ -95,4 +111,15 @@ class PGPHeader():
                 retVal.append(i)
 
         return retVal
+
+
+    def __str__(self):
+        ret_str = '\n----HEADER----\n'
+        ret_str += 'Packet format: ' + str(self.packet_format)
+        ret_str += '\nHeader length: ' + str(self.header_length)
+        ret_str += '\nPacket type: ' + str(self.packet_type)
+        ret_str += '\nPacket length: ' + str(self.packet_length)
+        ret_str += '\n--HEADER END--\n'
+
+        return ret_str
         
