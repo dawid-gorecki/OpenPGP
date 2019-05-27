@@ -114,12 +114,12 @@ class PGPHeader():
 
 
     def __str__(self):
-        ret_str = '----HEADER----\n'
+        ret_str = '\n----HEADER----\n'
         ret_str += 'Packet format: ' + str(self.packet_format)
-        ret_str += '\nHeader length: ' + self.header_length
-        ret_str += '\nPacket type: ' + self.packet_type
-        ret_str += '\nPacket length' + self.packet_length
-        ret_str += '\n--HEADER END--'
+        ret_str += '\nHeader length: ' + str(self.header_length)
+        ret_str += '\nPacket type: ' + str(self.packet_type)
+        ret_str += '\nPacket length: ' + str(self.packet_length)
+        ret_str += '\n--HEADER END--\n'
 
         return ret_str
         

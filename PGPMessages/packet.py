@@ -23,6 +23,14 @@ class PGPPacket():
             self.total_length = self.header.get_total_packet_length()
             self.raw_data = binary_data[0 : self.total_length]
 
+    def __str__(self):
+        ret_str = '\n----PGP PACKET----\n'
+        ret_str += self.header.__str__()
+        ret_str += '\nTotal packet length: ' + str(self.header.get_total_packet_length())
+        ret_str += '\n--PGP PACKET END--\n'
+        return ret_str
+        
+
 ###############################################################################
 #
 ###############################################################################
@@ -280,7 +288,7 @@ class PGPSignaturePacket(PGPPacket):
             raise TypeError('Data packet must be of literal data type.')
 
         if not isinstance(key, DSAPublicKey):
-            raise TypeError('Key must be of secret key type.')
+            raise TypeError('Key must be of public key type.')
 
         data_to_verify = bytearray()
         data_to_verify += data_packet.file_content
@@ -298,7 +306,26 @@ class PGPSignaturePacket(PGPPacket):
             self.signature.signed_r, self.signature.signed_s, key.y_value, key.q_bits)
 
     def generate_onepass(self):
-        pass
+        onepass = PGPOnePassSignaturePacket()
+        onepass.version = self.version
+        onepass.sig_type = self.sig_type
+        onepass.pub_key_algo = self.pub_key_algo
+        onepass.hash_algo = self.hash_algo
+        
+        onepass.nested = False
+
+    def __str__(self):
+        ret_str = '\n----PGP PACKET----\n'
+        ret_str += self.header.__str__()
+        ret_str += '\nVersion: ' + str(self.version)
+        ret_str += '\nSignature type: ' + str(self.sig_type)
+        ret_str += '\nPublic key type: ' + str(self.pub_key_algo)
+        ret_str += '\nHash algorithm: ' + str(self.hash_algo)
+        ret_str += '\nHashed subpacket length: ' + str(self.hashed_subpacket_length) 
+        ret_str += '\nUnhashed subpacket length: ' + str(self.unhashed_subpacket_length)
+        ret_str += '\nLeft 2 bytes of hash: ' + str(self.hashed_value_left_bits)
+        ret_str += '\n--PGP PACKET END--\n'
+        return ret_str
         
 ###############################################################################
 #
@@ -392,6 +419,17 @@ class PGPLiteralDataPacket(PGPPacket):
             self.created = int(time.time())
         
         self.generate_header()
+
+    def __str__(self):
+        ret_str = '\n----PGP PACKET----\n'
+        ret_str += self.header.__str__()
+        ret_str += '\nData format: ' + str(self.data_format)
+        ret_str += '\nFile name length: ' + str(self.file_name_length)
+        ret_str += '\nFile name: "' + str(self.file_name) + '"'
+        ret_str += '\nCreated timestamp: ' + str(self.created)
+        ret_str += '\n--PGP PACKET END--\n'
+
+        return ret_str
        
             
            
