@@ -1,7 +1,7 @@
 #ElGamal.py
 #Implementation of ElGamal public-key encryption scheme
 
-import aux
+from .aux import *
 import secrets
 
 def OctetsToInteger(oct):
@@ -16,10 +16,10 @@ def Encrypt(msg, p, g, y, k):
     m = msg
     while(k == 0):
         k = secrets.randbelow(p-2)
-    gamma = aux.squareAndMultiply(g, k, p)
-    delta = (m * aux.squareAndMultiply(y, k, p)) % p
+    gamma = squareAndMultiply(g, k, p)
+    delta = (m * squareAndMultiply(y, k, p)) % p
     return (gamma, delta)
 
 def Decrypt(msg, p, x):
-    pre = aux.squareAndMultiply(msg[0], p-1-x, p)
+    pre = squareAndMultiply(msg[0], p-1-x, p)
     return (pre * msg[1]) % p

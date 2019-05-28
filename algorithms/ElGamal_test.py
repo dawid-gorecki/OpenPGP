@@ -1,5 +1,6 @@
 
-
+#test vectors are taken from
+#https://gist.github.com/devinrsmith/58926b3d62ccfe9818057f94d2c7189c#file-elgamal_test_vectors-csv
 import ElGamal
 import os
 import aux
