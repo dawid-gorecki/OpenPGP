@@ -103,3 +103,17 @@ class PGPMessage():
             
         else:
             raise ValueError('Message contains no signature or no data.')
+
+    def sign_message(self, key_msg):
+        if len(self.packets) == 0:
+            raise ValueError('Message must have data packet.')
+        if len(self.packets) > 1:
+            raise ValueError('Signing messages with more than one message packet is not supported.')
+
+        if not isinstance(self.packets[0], PGPLiteralDataPacket):
+            raise TypeError('Packet must be of literal data type.')
+
+        
+
+        
+        

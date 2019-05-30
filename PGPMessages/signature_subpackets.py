@@ -67,24 +67,27 @@ class PGPSignatureSubPcktHeader():
             self.subpacket_type = None
 
     def get_total_length_of_subpacket(self):
-        total_len = self.length_of_length + self.subpacket_length
+        #total_len = self.length_of_length + self.subpacket_length
+        total_len = self.get_header_length() + self.subpacket_length - 1
         return total_len
 
     def get_header_length(self):
         return self.length_of_length + 1
 
     def set_length(self, length):
-        if length > 192:
+        if length > 191:
             raise NotImplementedError('Subpackets of length higher than 192 not implemented.')
         
         self.length_of_length = 1
-        self.subpacket_length = length
+        self.subpacket_length = length+1
 
     def to_bytes(self):
         if self.subpacket_length > 192:
             raise NotImplementedError('Subpackets of length bigger than 192 not yet implemented.')
 
         ret_val = bytearray()
+
+        ret_val += self.subpacket_length.to_bytes(length=1, byteorder='big')
 
         if self.subpacket_type is None:
             raise ValueError('No subpacket type given.')
@@ -95,8 +98,6 @@ class PGPSignatureSubPcktHeader():
             ret_val += tmp.to_bytes(length = 1, byteorder='big')
         else:
             ret_val += self.subpacket_type.value.to_bytes(length=1, byteorder='big')
-
-        ret_val += self.subpacket_length.to_bytes(length=1, byteorder='big')
         
         return ret_val  
 
@@ -116,14 +117,14 @@ class PGPSignatureSubPckt():
     def __init__(self, binary_data = None):
         if binary_data is not None:
             self.header = PGPSignatureSubPcktHeader(binary_data = binary_data)
-            self.raw_data = binary_data[0:self.header.get_header_length()+self.header.subpacket_length]
-            print(self.header.get_total_length_of_subpacket())
+            self.raw_data = binary_data[0:self.header.get_total_length_of_subpacket()]
         else:
             self.header = PGPSignatureSubPcktHeader()
             self.raw_data = None
 
     def to_bytes(self):
         ret_val = self.raw_data
+        return ret_val
 
     def __str__(self):
         ret_str = '\n__SUBPCKT__'
@@ -177,7 +178,7 @@ class PGPSigCreationSubPckt(PGPSignatureSubPckt):
                 raise ValueError('Subpacket should have SIG_CREATION_TIME type.')
 
             self.raw_data = subPckt.raw_data
-            self.created = int.from_bytes(self.raw_data[self.header.get_header_length():], byteorder='big')
+            self.created = int.from_bytes(self.raw_data[self.header.get_header_length():self.header.get_header_length()+4], byteorder='big')
         else:
             self.header = PGPSignatureSubPcktHeader()
             self.raw_data = None
@@ -189,7 +190,8 @@ class PGPSigCreationSubPckt(PGPSignatureSubPckt):
 
     def to_bytes(self):
         ret_bytes = self.header.to_bytes()
-        ret_bytes += self.created.to_bytes(length=4, bytorder='big')
+        ret_bytes += self.created.to_bytes(length=4, byteorder='big')
+        return ret_bytes
 
 
 ###############################################################################
@@ -208,7 +210,7 @@ class PGPSignerUIDSubPckt(PGPSignatureSubPckt):
 
             self.raw_data = subPckt.raw_data
             tmp = self.raw_data[self.header.get_header_length():]
-            self.userID = str(tmp)
+            self.userID = tmp.decode('ascii')
         else:
             self.header = PGPSignatureSubPcktHeader()
             self.raw_data = None
@@ -216,9 +218,10 @@ class PGPSignerUIDSubPckt(PGPSignatureSubPckt):
 
     def generate_header(self):
         self.header.subpacket_type = SubPacketType.SIGNERS_USER_ID
-        self.header.length = len(self.userID)
+        self.header.set_length(len(self.userID))
 
     def to_bytes(self):
         ret_bytes = self.header.to_bytes()
         ret_bytes += self.userID.encode('ascii')
+        return ret_bytes
 
