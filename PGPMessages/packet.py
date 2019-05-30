@@ -58,6 +58,8 @@ class SignatureType(Enum):
 
 class PGPPublicKeyPacket(PGPPacket):
     def __init__(self, packet = None):
+        super().__init__()
+
         if packet is not None:
             if packet.header.packet_type != PacketType.PUBLIC_KEY:
                 raise ValueError('Packet must be of public key type.')
@@ -91,7 +93,7 @@ class PGPPublicKeyPacket(PGPPacket):
 
         else:
             #default values
-            self.header = None
+            self.header = PGPHeader()
             self.raw_data = None
             self.version = None
             self.time_created = None
@@ -104,6 +106,8 @@ class PGPPublicKeyPacket(PGPPacket):
 
 class PGPSecretKeyPacket(PGPPacket):
     def __init__(self, packet = None):
+        super().__init__()
+
         if packet is not None:
             if packet.header.packet_type != PacketType.SECRET_KEY:
                 raise ValueError('Packet must be of secret key type.')
@@ -270,8 +274,6 @@ class PGPSignaturePacket(PGPPacket):
             self.signature = DSA_Signature()
             self.signature.parse_binary(self.raw_data[offset:])
         else:
-            self.header = None
-            self.raw_data = None
             self.version = None
             self.sig_type = None
             self.pub_key_algo = None
