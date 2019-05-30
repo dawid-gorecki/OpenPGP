@@ -2,6 +2,7 @@ from .header import PGPHeader, PacketType
 from .algo_constants import *
 from .key_types import *
 from .signature_types import *
+from .signature_subpackets import *
 from algorithms.DSA import Verify, Hash
 import hashlib
 from enum import Enum
@@ -263,11 +264,32 @@ class PGPSignaturePacket(PGPPacket):
 
             #currently ignoring subpackets
             self.hashed_subpacket_data_raw = self.raw_data[offset:offset + self.hashed_subpacket_length]
+            
+            self.hashed_subpackets = []
+            hashed_sub_offset = 0
+
+            while hashed_sub_offset < len(self.hashed_subpacket_data_raw):
+                subpckt = PGPSignatureSubPckt(self.hashed_subpacket_data_raw[hashed_sub_offset:])
+                subpckt = convert_subpckt(subpckt=subpckt)
+                hashed_sub_offset += subpckt.header.get_total_length_of_subpacket()
+                self.hashed_subpackets.append(subpckt)
+
+
             offset += self.hashed_subpacket_length
             self.test = offset
             self.unhashed_subpacket_length = int.from_bytes(self.raw_data[offset:offset+2], byteorder = 'big')
             offset += 2
             self.unhashed_subpacket_data_raw = self.raw_data[offset:offset + self.unhashed_subpacket_length]
+            
+            self.unhashed_subpackets = []
+            unhashed_sub_offset = 0
+
+            while unhashed_sub_offset < len(self.unhashed_subpacket_data_raw):
+                subpckt = PGPSignatureSubPckt(self.unhashed_subpacket_data_raw[unhashed_sub_offset:])
+                subpckt = convert_subpckt(subpckt=subpckt)
+                unhashed_sub_offset += subpckt.header.get_total_length_of_subpacket()
+                self.unhashed_subpackets.append(subpckt)
+
             offset += self.unhashed_subpacket_length
             self.hashed_value_left_bits = self.raw_data[offset: offset+2]
             offset += 2
@@ -323,8 +345,12 @@ class PGPSignaturePacket(PGPPacket):
         ret_str += '\nSignature type: ' + str(self.sig_type)
         ret_str += '\nPublic key type: ' + str(self.pub_key_algo)
         ret_str += '\nHash algorithm: ' + str(self.hash_algo)
-        ret_str += '\nHashed subpacket length: ' + str(self.hashed_subpacket_length) 
+        ret_str += '\nHashed subpacket length: ' + str(self.hashed_subpacket_length)
+        for subpckt in self.hashed_subpackets:
+            ret_str += subpckt.__str__() 
         ret_str += '\nUnhashed subpacket length: ' + str(self.unhashed_subpacket_length)
+        for subpckt in self.unhashed_subpackets:
+            ret_str += subpckt.__str__()
         ret_str += '\nLeft 2 bytes of hash: ' + str(self.hashed_value_left_bits)
         ret_str += '\n--PGP PACKET END--\n'
         return ret_str
