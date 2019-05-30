@@ -28,6 +28,16 @@ class SubPacketType(Enum):
 
 SUBPACKET_LENGTHS = (1, 2, 5)
 
+def convert_subpckt(subpckt):
+    if subpckt.header.subpacket_type == SubPacketType.ISSUER:
+        subpckt = PGPIssuerSubPckt(subPckt = subpckt)
+    elif subpckt.header.subpacket_type == SubPacketType.SIG_CREATION_TIME:
+        subpckt = PGPSigCreationSubPckt(subPckt = subpckt)
+    elif subpckt.header.subpacket_type == SubPacketType.SIGNERS_USER_ID:
+        subpckt = PGPSignerUIDSubPckt(subPckt = subpckt)
+
+    return subpckt
+
 class PGPSignatureSubPcktHeader():
     def __init__(self, binary_data=None):
         if binary_data is not None:
