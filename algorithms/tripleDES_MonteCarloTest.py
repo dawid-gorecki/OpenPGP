@@ -1,4 +1,4 @@
-import tripleDES
+from .tripleDES import *
 import re
 import os
 import math
@@ -31,7 +31,7 @@ for line in file:
             x = 0
             c = []
             for i in range(10000):
-                out = tripleDES.CFBEncrypt(plain.to_bytes(8, "big"), keys, IV, False)
+                out = CFBEncrypt(plain.to_bytes(8, "big"), keys, IV, False)
                 x = 0
                 for i in out:
                     x = (x << 8) | i
@@ -64,7 +64,7 @@ for line in file:
             x = 0
             c = []
             for i in range(10000):
-                out = tripleDES.CFBDecrypt(cipher.to_bytes(8, "big"), keys, IV, False)
+                out = CFBDecrypt(cipher.to_bytes(8, "big"), keys, IV, False)
                 x = 0
                 for i in out:
                     x = (x << 8) | i

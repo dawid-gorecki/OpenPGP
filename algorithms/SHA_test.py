@@ -1,6 +1,6 @@
 #! /usr/bin/python3
 
-import SHA512
+from .SHA512 import *
 import cProfile
 import io
 import pstats
@@ -12,7 +12,7 @@ pr = cProfile.Profile()
 pr.enable()
 #tracemalloc.start()
 #0x20000000
-x = SHA512.Hash(bytearray('Z'*10000000, "UTF-8"))
+x = Hash(bytearray('Z'*10000000, "UTF-8"))
 #snapshot = tracemalloc.take_snapshot()
 #top_stats = snapshot.statistics('lineno')
 

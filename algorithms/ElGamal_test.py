@@ -1,9 +1,9 @@
 
 #test vectors are taken from
 #https://gist.github.com/devinrsmith/58926b3d62ccfe9818057f94d2c7189c#file-elgamal_test_vectors-csv
-import ElGamal
+from .ElGamal import *
 import os
-import aux
+from .aux import *
 file = open('./ElGamal_TestVectors/elgamal_test_vectors.csv')
 count = 1
 for line in file:
@@ -17,8 +17,8 @@ for line in file:
     m = int(vals[4])
     a = int(vals[5])
     b = int(vals[6])
-    y = aux.squareAndMultiply(g, x, p)
-    ciphertext = ElGamal.Encrypt(m, p, g, y, k)
+    y = squareAndMultiply(g, x, p)
+    ciphertext = Encrypt(m, p, g, y, k)
     if ciphertext == (a, b):
         print("test " + str(count) + " passed")
     count += 1

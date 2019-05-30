@@ -1,4 +1,4 @@
-import tripleDES
+from .tripleDES import *
 import re
 import os
 
@@ -20,9 +20,9 @@ for line in file:
     if re.match(r'CIPHERTEXT', line):
         cipher = int("0x" + line[13:30], 16)
         if(count < 64):
-            out = tripleDES.CFBEncrypt(plain.to_bytes(8, "big"), keys, IV, False)
+            out = CFBEncrypt(plain.to_bytes(8, "big"), keys, IV, False)
         else:
-            out = tripleDES.CFBDecrypt(cipher.to_bytes(8, "big"), keys, IV, False)
+            out = CFBDecrypt(cipher.to_bytes(8, "big"), keys, IV, False)
         #print(hex(IV))
         #print(hex(plain))
         #print(hex(cipher))
