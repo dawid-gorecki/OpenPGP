@@ -1,8 +1,10 @@
-from .tripleDES import *
+import os, sys
+p = os.getcwd()
+sys.path.append(p)
+from algorithms.tripleDES import *
 import re
-import os
 
-file = open('//home//aigras//crypto//OpenPGP//algorithms//KAT_TDES//TCFB64permop.rsp')
+file = open(p + '/algorithms/tests/TCFB64varkey.rsp')
 keys = [0,0,0]
 IV = 0
 count = 0
@@ -10,7 +12,7 @@ plain = 0
 cipher = 0
 print("Variable Key Known Answer Test")
 for line in file:
-    if count < 32:    
+    if count < 56:    
         if re.match(r'KEYs', line) != None:
             for i in range(3):
                 keys[i] = int("0x"+line[7:23], 16)

@@ -1,16 +1,18 @@
-import tripleDES
+import os, sys
+p = os.getcwd()
+sys.path.append(p)
+from algorithms.tripleDES import *
 import re
-import os
 
-file = open('//home//aigras//crypto//OpenPGP//algorithms//KAT_TDES//TCFB64vartext.rsp')
+file = open(p + '/algorithms/tests/TCFB64permop.rsp')
 keys = [0,0,0]
 IV = 0
 count = 0
 plain = 0
 cipher = 0
-print("Variable Text Known Answer Test")
+print("Variable Key Known Answer Test")
 for line in file:
-    if count < 64:    
+    if count < 32:    
         if re.match(r'KEYs', line) != None:
             for i in range(3):
                 keys[i] = int("0x"+line[7:23], 16)
@@ -20,7 +22,7 @@ for line in file:
             plain = int("0x" + line[12:29], 16)
         if re.match(r'CIPHERTEXT', line):
             cipher = int("0x" + line[13:30], 16)
-            out = tripleDES.CFBEncrypt(plain.to_bytes(8, "big"), keys, IV, False)
+            out = CFBEncrypt(plain.to_bytes(8, "big"), keys, IV, False)
             x = 0
             for i in out:
                 x = (x << 8) | i
@@ -36,7 +38,7 @@ for line in file:
             cipher = int("0x" + line[13:30], 16)
         if re.match(r'PLAINTEXT', line):
             plain = int("0x" + line[12:29], 16)
-            out = tripleDES.CFBDecrypt(cipher.to_bytes(8, "big"), keys, IV, False)
+            out = CFBDecrypt(cipher.to_bytes(8, "big"), keys, IV, False)
             x = 0
             for i in out:
                 x = (x << 8) | i
