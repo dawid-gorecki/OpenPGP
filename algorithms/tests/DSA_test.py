@@ -1,11 +1,11 @@
-from .DSA import Sign
-
+import os, sys
+p = os.getcwd()
+sys.path.append(p)
+from algorithms.DSA import Sign
 import re
-import os
 import math
 matchFound = False
-testRegex = re.compile(r'(\[.*\])+')
-file = open("SigGen.txt")
+file = open(p + "/algorithms/tests/SigGen.txt")
 count = 0
 for line in file:
     if re.match(r'\[mod = L=(1024|2048|3072), N=(160|224|256), SHA-512\]', line)!=None:
@@ -45,11 +45,12 @@ for line in file:
             count += 1
             print("Starting test nr " + str(count))
             MsgBytes = Msg.to_bytes(math.ceil(Msg.bit_length()/8), "big")
+            MsgBytes = bytearray(MsgBytes)
             (rOut, sOut) = Sign(MsgBytes, P, Q, G, X, N, K)
-           # print(hex(rOut))
-            #print(hex(R))
-            #print(hex(sOut))
-            #print(hex(S))
+            # print(hex(rOut))
+            # print(hex(R))
+            # print(hex(sOut))
+            # print(hex(S))
             if rOut == R and sOut == S:
                 print("Test nr " + str(count) + " passed")
             if count == 15:

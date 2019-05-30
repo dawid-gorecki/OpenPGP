@@ -1,14 +1,17 @@
-from .tripleDES import *
+import os, sys
+p = os.getcwd()
+sys.path.append(p)
+from algorithms.tripleDES import *
 import re
-import os
 
-file = open('//home//aigras//crypto//OpenPGP//algorithms//KAT_TDES//TCFB64invperm.rsp')
+file = open(p + '/algorithms/tests/TCFB64invperm.rsp')
 keys = [0,0,0]
 IV = 0
 count = 0
 plain = 0
 cipher = 0
 print("Inverse Permutation test")
+print("Output should be all 0s")
 for line in file:
     if re.match(r'KEYs', line) != None:
         for i in range(3):

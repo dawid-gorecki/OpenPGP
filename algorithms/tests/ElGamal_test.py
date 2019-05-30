@@ -1,10 +1,12 @@
-
+import os, sys
+p = os.getcwd()
+print(p)
+sys.path.append(p)
 #test vectors are taken from
 #https://gist.github.com/devinrsmith/58926b3d62ccfe9818057f94d2c7189c#file-elgamal_test_vectors-csv
-from .ElGamal import *
-import os
-from .aux import *
-file = open('./ElGamal_TestVectors/elgamal_test_vectors.csv')
+from algorithms.ElGamal import *
+from algorithms.aux import *
+file = open(p + '/algorithms/tests/elgamal_test_vectors.csv')
 count = 1
 for line in file:
     vals = line.split(',')
@@ -22,4 +24,3 @@ for line in file:
     if ciphertext == (a, b):
         print("test " + str(count) + " passed")
     count += 1
-print(count)
