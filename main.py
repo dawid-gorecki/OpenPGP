@@ -28,9 +28,17 @@ def main():
         msg.open_pgp_file(args.infile)
         msg.list_packets()
     elif args.sign:
-        msg = PGPMessage()
-        msg.open_data_file(args.infile)
-        msg.sign_message()
+        if args.key is None:
+            print('Please provide a key.')
+        elif args.outfile is None:
+            print('Please provide output file name.')
+        else:
+            msg = PGPMessage()
+            msg.open_data_file(args.infile)
+            key_msg = PGPMessage()
+            key_msg.open_pgp_file(args.key)
+            msg.sign_message(key_msg)
+            msg.write_gpg_file(args.outfile)
 
 if __name__=='__main__':
     main()
