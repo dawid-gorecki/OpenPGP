@@ -3,7 +3,8 @@ from .algo_constants import *
 from .key_types import *
 from .signature_types import *
 from .signature_subpackets import *
-from algorithms.DSA import Verify, Hash
+from algorithms.DSA import Verify, Sign
+from algorithms.SHA512 import Hash
 import hashlib
 from enum import Enum
 import time
@@ -110,7 +111,7 @@ class PGPPublicKeyPacket(PGPPacket):
         val_to_hash += self.header.packet_length.to_bytes(length=2, byteorder='big')
         val_to_hash += self.raw_data[self.header.header_length:]
         h = hashlib.sha1(val_to_hash).digest()
-        return h
+        return int.from_bytes(h, byteorder='big')
         
 
 ###############################################################################
@@ -214,7 +215,7 @@ class PGPSecretKeyPacket(PGPPacket):
         val_to_hash += tmp_key
 
         h = hashlib.sha1(val_to_hash).digest()
-        return h
+        return int.from_bytes(h, byteorder='big')
 
 
 ###############################################################################
@@ -358,7 +359,7 @@ class PGPSignaturePacket(PGPPacket):
             self.signature = DSA_Signature()
             self.signature.parse_binary(self.raw_data[offset:])
         else:
-            self.version = None
+            self.version = 4
             self.sig_type = None
             self.pub_key_algo = None
             self.hash_algo = None
@@ -388,6 +389,7 @@ class PGPSignaturePacket(PGPPacket):
         for i in self.hashed_subpackets:
             data_to_verify += i.to_bytes()
         hash_len = self.hashed_subpacket_length + 6
+
         data_to_verify += b'\x04\xff'
         data_to_verify += hash_len.to_bytes(length=4, byteorder='big')
 
@@ -449,9 +451,9 @@ class PGPSignaturePacket(PGPPacket):
     def to_bytes_partial(self):
         ret_bytes = bytearray()
         ret_bytes = self.version.to_bytes(length=1, byteorder='big')
-        ret_bytes += self.sig_type.value
-        ret_bytes += self.pub_key_algo.value
-        ret_bytes += self.hash_algo.value
+        ret_bytes += self.sig_type.value.to_bytes(length=1, byteorder='big')
+        ret_bytes += self.pub_key_algo.value.to_bytes(length=1, byteorder='big')
+        ret_bytes += self.hash_algo.value.to_bytes(length=1, byteorder='big')
         ret_bytes += self.hashed_subpacket_length.to_bytes(length=2, byteorder='big')
         for i in self.hashed_subpackets:
             ret_bytes += i.to_bytes()
@@ -461,13 +463,7 @@ class PGPSignaturePacket(PGPPacket):
     def to_bytes(self):
         ret_bytes = bytearray()
         ret_bytes += self.header.to_bytes()
-        ret_bytes += self.version.to_bytes(length=1, byteorder='big')
-        ret_bytes += self.sig_type.value
-        ret_bytes += self.pub_key_algo.value
-        ret_bytes += self.hash_algo.value
-        ret_bytes += self.hashed_subpacket_length.to_bytes(length=2, byteorder='big')
-        for i in self.hashed_subpackets:
-            ret_bytes += i.to_bytes()
+        ret_bytes += self.to_bytes_partial()
         ret_bytes += self.unhashed_subpacket_length.to_bytes(length=2, byteorder='big')
         for i in self.unhashed_subpackets:
             ret_bytes += i.to_bytes()
@@ -587,10 +583,68 @@ class PGPLiteralDataPacket(PGPPacket):
         self.generate_header()
 
     def sign(self, secret_key, user_id):
+        #create signature packet
         sig_packet = PGPSignaturePacket()
+        #set sig type and algorithm types
+        sig_packet.sig_type = SignatureType.BINARY_DOC
+        sig_packet.pub_key_algo = PublicKeyAlgo.DSA
+        sig_packet.hash_algo = HashAlgo.SHA512
 
+        #add fingerprint subpacket
+        fingerprint_subpckt = PGPFingerprintSubPckt()
+        fingerprint_subpckt.fingerprint = secret_key.pub_key.fingerprint
+        fingerprint_subpckt.generate_header()
+        sig_packet.hashed_subpackets.append(fingerprint_subpckt)
+
+        #add creation time subpacket
+        time_subpckt = PGPSigCreationSubPckt()
+        time_subpckt.created = int(time.time())
+        time_subpckt.generate_header()
+        sig_packet.hashed_subpackets.append(time_subpckt)
+
+        #add user id packet
+        uid_subpckt = PGPSignerUIDSubPckt()
+        uid_subpckt.userID = user_id
+        uid_subpckt.generate_header()
+        sig_packet.hashed_subpackets.append(uid_subpckt)
+
+        #add issuer key id subpacket
+        issuer_subpckt = PGPIssuerSubPckt()
+        issuer_id = secret_key.pub_key.fingerprint.to_bytes(length=20, byteorder='big')
+        issuer_id = issuer_id[-8:]
+        issuer_id = int.from_bytes(issuer_id, byteorder='big')
+        issuer_subpckt.issuerID = issuer_id
+        issuer_subpckt.generate_header()
+        sig_packet.unhashed_subpackets.append(issuer_subpckt)
+
+        sig_packet.calculate_subpacket_lengths()
+
+        sig_partial = sig_packet.to_bytes_partial()
+        partial_length = len(sig_partial)
+        
         data_to_sign = bytearray()
         data_to_sign += self.file_content
+        data_to_sign += sig_partial
+        data_to_sign += b'\x04\xff'
+        data_to_sign += partial_length.to_bytes(length=4, byteorder='big')
+        
+
+        sig_packet.hashed_value_left_bits = Hash(data_to_sign).to_bytes(length=64, byteorder='big')[0:2]
+        
+        signature = DSA_Signature()
+        sig_value = Sign(data_to_sign, secret_key.pub_key.p_value, secret_key.pub_key.q_value,
+            secret_key.pub_key.g_value, secret_key.x_value, secret_key.pub_key.q_bits)
+        signature.signed_r = sig_value[0]
+        signature.signed_s = sig_value[1]
+        signature.signed_r_bits = signature.signed_r.bit_length()
+        signature.signed_s_bits = signature.signed_s.bit_length()
+
+        sig_packet.signature = signature
+        
+        sig_packet.generate_header()
+
+        return sig_packet
+        
         
     def __str__(self):
         ret_str = '\n----PGP PACKET----\n'

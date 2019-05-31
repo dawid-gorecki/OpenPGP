@@ -262,6 +262,6 @@ class PGPFingerprintSubPckt(PGPSignatureSubPckt):
     def to_bytes(self):
         ret_bytes = bytearray()
         ret_bytes += self.header.to_bytes()
-        ret_bytes += self.fingerprint_version.to_bytes(length=4, byteorder='big')
-        ret_bytes += self.fingerprint.to_bytes(byteorder='big', length=1)
+        ret_bytes += self.fingerprint_version.to_bytes(length=1, byteorder='big')
+        ret_bytes += self.fingerprint.to_bytes(byteorder='big', length=20)
         return ret_bytes

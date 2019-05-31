@@ -12,6 +12,8 @@ def convert_packet(packet):
         packet = PGPSecretKeyPacket(packet = packet)
     elif packet.header.packet_type == PacketType.PUBLIC_KEY:
         packet = PGPPublicKeyPacket(packet = packet)
+    elif packet.header.packet_type == PacketType.USER_ID:
+        packet = PGPUserIDPacket(packet = packet)
 
     return packet
 
@@ -125,6 +127,20 @@ class PGPMessage():
 
         if not isinstance(self.packets[0], PGPLiteralDataPacket):
             raise TypeError('Packet must be of literal data type.')
+
+        retval = self.packets[0].sign(key_msg.get_secret_key(), key_msg.get_user_ID())
+        self.packets.append(retval)
+        self.packets.insert(0, retval.generate_onepass())
+
+    def write_gpg_file(self, filename):
+        with open(filename, 'wb') as outFile:
+            data = bytearray()
+            for packet in self.packets:
+                data += packet.to_bytes()
+
+            outFile.write(data)
+    
+        
 
         
 
