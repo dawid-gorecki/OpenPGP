@@ -266,11 +266,9 @@ def CFBDecrypt(msg: bytes, keys: list, IV = 0, pgpMode = True):
         l = len(msg)
         msgFromBytes = []
         toAppend = (int).from_bytes(msg[0:8], "big")
-        #print(hex(toAppend))
         msgFromBytes.append(toAppend)
         toAppend = (int).from_bytes(msg[8 : 10], "big")
         msgFromBytes.append(toAppend)
-        #print(hex(toAppend))
         for i in range(ceil(len(msg)/8)-2):
             toAppend = (int).from_bytes(msg[i * 8 + 10: (i + 1) * 8 + 10 ], "big")
             if len(msg[i*8:(i+1)*8]) == 0:
@@ -288,8 +286,6 @@ def CFBDecrypt(msg: bytes, keys: list, IV = 0, pgpMode = True):
         cipherBlocks[8] = ((feedbackRegisterEncrypted & (0xFF << 56) ) ^ (msgFromBytes[1] << 48)) >> 56
         cipherBlocks[9] = (((feedbackRegisterEncrypted & (0xFF << 48) ) ^ (msgFromBytes[1] << 48)) >> 48) & 0xFF
         
-        #print(hex(cipherBlocks[8]))
-        #print(hex(cipherBlocks[9]))
         feedbackRegister = 0
         feedbackRegister = (msgFromBytes[0] & 0xFFFFFFFFFFFF)
         feedbackRegister = (feedbackRegister << 16) | msgFromBytes[1] 
