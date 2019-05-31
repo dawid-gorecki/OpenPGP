@@ -5,6 +5,8 @@ from .signature_types import *
 from .signature_subpackets import *
 from algorithms.DSA import Verify, Sign
 from algorithms.SHA512 import Hash
+from algorithms.ElGamal import Decrypt
+from algorithms.tripleDES import CFBDecrypt
 import hashlib
 from enum import Enum
 import time
@@ -118,12 +120,74 @@ class PGPPublicKeyPacket(PGPPacket):
 #
 ###############################################################################
 
+class PGPPublicSubkeyPacket(PGPPacket):
+    def __init__(self, packet = None):
+        super().__init__()
+
+        if packet is not None:
+            if packet.header.packet_type != PacketType.PUBLIC_SUBKEY:
+                raise ValueError('Packet must be of public subkey type.')
+
+            #copy values    
+            self.header = packet.header
+            self.raw_data = packet.raw_data
+
+            #set offset for the rest of parsing
+            offset = self.header.header_length
+            #packet version (should be 4)
+            self.version = self.raw_data[offset]
+            if self.version != 4:
+                raise NotImplementedError('Only version 4 packets implemented.')
+            
+            offset += 1
+            #time of creation
+            self.time_created = int.from_bytes(self.raw_data[offset : offset+4], byteorder='big')
+            offset += 4
+            #public key algorithm (currently only Elgamal supported)
+            self.public_key_algo = PublicKeyAlgo(self.raw_data[offset])
+            offset += 1
+
+            #parse key
+            self.key = None
+            if self.public_key_algo == PublicKeyAlgo.ELGAMAL_ENCRYPT_ONLY:
+                self.key = ElGamalPublicKey()
+                self.key.parse_binary(self.raw_data[offset:])
+            else:
+                raise NotImplementedError('Only DSA public keys implemented for now.')
+
+            self.key.fingerprint = self.get_fingerprint()
+
+        else:
+            #default values
+            raise NotImplementedError('Creating new public key packets not implemented.')
+            self.header = PGPHeader()
+            self.raw_data = None
+            self.version = None
+            self.time_created = None
+            self.public_key_algo = None
+            self.key = None
+
+    def get_fingerprint(self):
+        val_to_hash = bytearray()
+        val_to_hash += b'\x99'
+        val_to_hash += self.header.packet_length.to_bytes(length=2, byteorder='big')
+        val_to_hash += self.raw_data[self.header.header_length:]
+        h = hashlib.sha1(val_to_hash).digest()
+        
+        return int.from_bytes(h, byteorder='big')
+
+###############################################################################
+#
+###############################################################################
+
 class PGPPublicKeyEncryptedSessionKeyPacket(PGPPacket):
     def __init__(self, packet = None):
         super().__init__()
 
         if packet is not None:
             self.header = packet.header
+            if self.header.packet_type != PacketType.PK_ENCRYPTED_SESSION_KEY:
+                raise ValueError('Packet must have public key encrypted session key packet type.')
             self.raw_data = packet.raw_data
             offset = self.header.header_length
             self.version = self.raw_data[offset]
@@ -132,7 +196,8 @@ class PGPPublicKeyEncryptedSessionKeyPacket(PGPPacket):
             offset += 8
             self.pub_key_algo = PublicKeyAlgo(self.raw_data[offset])
             offset += 1
-            self.enc_key = self.raw_data[offset:]
+            self.enc_key = ElGamalEncryptedSessionKey()
+            self.enc_key.parse_binary(self.raw_data[offset:])
         else:
             self.header = PGPHeader()
             self.raw_data = None
@@ -141,6 +206,57 @@ class PGPPublicKeyEncryptedSessionKeyPacket(PGPPacket):
             self.pub_key_algo = None
             self.enc_key = None
 
+    def to_bytes(self):
+        ret_bytes = bytearray()
+        ret_bytes += self.header.to_bytes()
+        ret_bytes += self.version.to_bytes(length=1, byteorder='big')
+        ret_bytes += self.keyID.to_bytes(length=8, byteorder='big')
+        ret_bytes += self.pub_key_algo.value.to_bytes(length=1, byteorder='big')
+        ret_bytes += self.enc_key.to_bytes()
+
+        return ret_bytes
+
+    def generate_header(self):
+        self.header.packet_type = PacketType.PK_ENCRYPTED_SESSION_KEY
+        #key ID, version, public key algorithm
+        length = 10
+        #key length
+        length += self.enc_key.get_total_key_length()
+        self.header.set_length(length)
+
+    def decrypt_key(self, key):
+        if not isinstance(key, ElGamalSecretKey):
+            raise TypeError('Key must be of elgamal secret key type.')
+
+        a = Decrypt((self.enc_key.gkmodp_value, self.enc_key.mykmodp_value), key.pub_key.p_value, 
+            key.x_value)
+
+        #get the number of bytes needed for the encoded message
+        byte_len = math.ceil(a.bit_length() / 8)
+
+        value = a.to_bytes(length=byte_len, byteorder='big')
+
+        #I ignore the leading zeros in this case.
+        if value[0] != 0x02:
+            raise ValueError('Decryption error')
+
+        #find the interesting message
+        message_offset = None
+        for i in range(1, byte_len):
+            if value[i] == 0x00:
+                message_offset = i
+                break
+
+        if message_offset is None:
+            raise ValueError('Decryption error.')
+
+        if value[message_offset+1] != SymKeyAlgo.TRIPLE_DES.value:
+            raise NotImplementedError('Only triple DES encryption currently implemented.')
+
+        #remove session key checksum
+        message = int.from_bytes(value[message_offset+2:-2], byteorder='big')
+
+        return message
 
 ###############################################################################
 #
@@ -217,6 +333,80 @@ class PGPSecretKeyPacket(PGPPacket):
         h = hashlib.sha1(val_to_hash).digest()
         return int.from_bytes(h, byteorder='big')
 
+###############################################################################
+#
+###############################################################################
+
+class PGPSecretSubkeyPacket(PGPPacket):
+    def __init__(self, packet = None):
+        super().__init__()
+
+        if packet is not None:
+            if packet.header.packet_type != PacketType.SECRET_SUBKEY:
+                raise ValueError('Packet must be of secret key type.')
+            
+            self.header = packet.header
+            self.raw_data = packet.raw_data
+
+            offset = self.header.header_length
+
+            self.version = self.raw_data[offset]
+            offset += 1
+            if self.version != 4:
+                raise NotImplementedError('Only version 4 packets now implemented.')
+
+            self.time_created = int.from_bytes(self.raw_data[offset:offset+4], byteorder='big')
+            offset += 4
+
+            self.public_key_algo = PublicKeyAlgo(self.raw_data[offset])
+            offset += 1
+
+            public_key = None
+
+            if self.public_key_algo == PublicKeyAlgo.ELGAMAL_ENCRYPT_ONLY:
+                public_key = ElGamalPublicKey()
+                offset += public_key.parse_binary(self.raw_data[offset:])
+
+            else:
+                raise NotImplementedError('Only DSA keys currently implemented.')
+            
+            self.s2k_convention = self.raw_data[offset]
+            if self.s2k_convention != 0:
+                raise NotImplementedError('No secret key encryption supported.')
+
+            offset += 1
+
+            self.secret_key = ElGamalSecretKey()
+            self.secret_key.pub_key = public_key
+            offset += self.secret_key.parse_binary(self.raw_data[offset:])
+            
+            if len(self.raw_data[offset:]) != 2:
+                raise ValueError('Checksum too long.')
+
+            self.checksum = int.from_bytes(self.raw_data[offset:], byteorder='big')
+            self.secret_key.pub_key.fingerprint=self.get_fingerprint()
+        else:
+            raise NotImplementedError('Secret key creation not implemented.')
+
+    def get_fingerprint(self):
+        val_to_hash = bytearray()
+        #value needed for hashing
+        val_to_hash += b'\x99'
+        #store public key in temporary variable
+        tmp_key = self.secret_key.pub_key.to_bytes()
+        #length of version, creation time and public key algorithm fields
+        tmp_len = 6
+        tmp_len += len(tmp_key)
+
+        #create value for hashing
+        val_to_hash += tmp_len.to_bytes(length=2, byteorder='big')
+        val_to_hash += self.version.to_bytes(length=1, byteorder='big')
+        val_to_hash += self.time_created.to_bytes(length=4, byteorder='big')
+        val_to_hash += self.public_key_algo.value.to_bytes(length=1, byteorder='big')
+        val_to_hash += tmp_key
+
+        h = hashlib.sha1(val_to_hash).digest()
+        return int.from_bytes(h, byteorder='big')
 
 ###############################################################################
 #
@@ -679,3 +869,43 @@ class PGPUserIDPacket(PGPPacket):
             self.raw_data = None
             self.userID = None
            
+###############################################################################
+# 
+###############################################################################  
+
+class PGPSymEncryptedDataPacket(PGPPacket):
+    def __init__(self, packet = None):
+        super().__init__()
+
+        if packet is not None:
+            if packet.header.packet_type != PacketType.SYM_ENCRYPTED_DATA:
+                raise ValueError('Packet must be of symmetrically encrypted data type.')
+
+            self.header = packet.header
+            self.raw_data = packet.raw_data
+            self.encrypted_data = self.raw_data[self.header.header_length:]
+        else:
+            self.header = PGPHeader()
+            self.raw_data = None
+            self.encrypted_data = None
+
+    def to_bytes(self):
+        pass
+
+    def decrypt(self, session_key):
+        session_key_length_bytes = int(192/8)
+        single_key_len = int(session_key_length_bytes / 3)
+
+        session_key = session_key.to_bytes(length=session_key_length_bytes, byteorder='big')
+        
+        key_list = []
+        offset = 0
+        while offset < session_key_length_bytes:
+            key_bytes = session_key[offset:offset+single_key_len]
+            key_bytes = int.from_bytes(key_bytes, byteorder='big')
+            key_list.append(key_bytes)
+            offset += single_key_len
+
+        return bytearray(CFBDecrypt(self.encrypted_data, key_list))[10:]
+
+        

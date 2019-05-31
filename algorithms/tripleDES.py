@@ -244,8 +244,13 @@ def CFBEncrypt(msg: bytes, keys: list, IV = 0, pgpMode = True):
                 for j in range(8):
                     feedbackRegister |= (cipherBlocks[(8*i+18) + j] << (56 - j * 8))
                 feedbackRegisterEncrypted = encryptBlock(feedbackRegister, keys)
-                feedbackRegisterEncrypted ^= msgFromBytes[i + 2]
+                if msgFromBytes[i+2].bit_length() < 56:
+                    feedbackRegisterEncrypted ^= msgFromBytes[i + 2] << (64 - msgFromBytes[i+2].bit_length())
+                else:
+                    feedbackRegisterEncrypted ^= msgFromBytes[i + 2]
                 for j in range(8):
+                    if (8*(i+1) + 18 + j) >= (len(msg)+10):
+                        break
                     cipherBlocks[8*(i+1) + 18 + j] = (feedbackRegisterEncrypted & (0xFF << (56 - j * 8))) >> (56 - j * 8)
     else:
         cipherBlocks = [0 for i in range(len(msg))]
@@ -269,9 +274,11 @@ def CFBDecrypt(msg: bytes, keys: list, IV = 0, pgpMode = True):
         msgFromBytes.append(toAppend)
         toAppend = (int).from_bytes(msg[8 : 10], "big")
         msgFromBytes.append(toAppend)
-        for i in range(ceil(len(msg)/8)-2):
+
+        #print(hex(toAppend))
+        for i in range(ceil((len(msg)-10)/8)):
             toAppend = (int).from_bytes(msg[i * 8 + 10: (i + 1) * 8 + 10 ], "big")
-            if len(msg[i*8:(i+1)*8]) == 0:
+            if len(msg[i*8+10:(i+1)*8+10]) == 0:
                 break
             msgFromBytes.append(toAppend)
         cipherBlocks = [0 for i in range(l)]
@@ -298,8 +305,14 @@ def CFBDecrypt(msg: bytes, keys: list, IV = 0, pgpMode = True):
             
             for i in range(len(msgFromBytes)-3):
                 feedbackRegisterEncrypted = encryptBlock(feedbackRegister, keys)
-                feedbackRegisterEncrypted ^= msgFromBytes[i+3]
+                #evil integer bit level hacking
+                if msgFromBytes[i+3].bit_length() < 56:
+                    feedbackRegisterEncrypted ^= (msgFromBytes[i+3] << (64 - msgFromBytes[i+3].bit_length()))
+                else:
+                    feedbackRegisterEncrypted ^= msgFromBytes[i+3]
                 for j in range(8):
+                    if (8 * i + j + 18) >= l:
+                        break
                     cipherBlocks[8 * i + j + 18 ] = (feedbackRegisterEncrypted & (0xFF << (56 - j * 8))) >> (56 - j * 8)
                 feedbackRegister = msgFromBytes[i+3]
     else:
