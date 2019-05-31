@@ -12,7 +12,8 @@ def OctetsToInteger(oct):
     return x
 
 
-def Encrypt(msg, p, g, y, k):
+
+def Encrypt(msg, p, g, y, k=0):
     """Encrypt(msg, p, g, y, k) -> (gamma, delta)
         Encrypt msg using ElGamal public key encryption.\n
         P and g are key parameters which are generated during the key generation process 

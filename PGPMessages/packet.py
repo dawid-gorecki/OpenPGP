@@ -889,8 +889,16 @@ class PGPSymEncryptedDataPacket(PGPPacket):
             self.raw_data = None
             self.encrypted_data = None
 
+    def generate_header(self):
+        self.header.packet_type = PacketType.SYM_ENCRYPTED_DATA
+        self.header.set_length(len(self.encrypted_data))
+
     def to_bytes(self):
-        pass
+        ret_bytes = bytearray()
+        ret_bytes += self.header.to_bytes()
+        ret_bytes += self.encrypted_data
+        return ret_bytes
+        
 
     def decrypt(self, session_key):
         session_key_length_bytes = int(192/8)
