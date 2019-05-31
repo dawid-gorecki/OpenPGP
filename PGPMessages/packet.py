@@ -5,6 +5,8 @@ from .signature_types import *
 from .signature_subpackets import *
 from algorithms.DSA import Verify, Sign
 from algorithms.SHA512 import Hash
+from algorithms.ElGamal import Decrypt
+from algorithms.tripleDES import CFBDecrypt
 import hashlib
 from enum import Enum
 import time
@@ -171,6 +173,7 @@ class PGPPublicSubkeyPacket(PGPPacket):
         val_to_hash += self.header.packet_length.to_bytes(length=2, byteorder='big')
         val_to_hash += self.raw_data[self.header.header_length:]
         h = hashlib.sha1(val_to_hash).digest()
+        
         return int.from_bytes(h, byteorder='big')
 
 ###############################################################################
@@ -203,6 +206,39 @@ class PGPPublicKeyEncryptedSessionKeyPacket(PGPPacket):
             self.pub_key_algo = None
             self.enc_key = None
 
+    def decrypt_key(self, key):
+        if not isinstance(key, ElGamalSecretKey):
+            raise TypeError('Key must be of elgamal secret key type.')
+
+        a = Decrypt((self.enc_key.gkmodp_value, self.enc_key.mykmodp_value), key.pub_key.p_value, 
+            key.x_value)
+
+        #get the number of bytes needed for the encoded message
+        byte_len = math.ceil(a.bit_length() / 8)
+
+        value = a.to_bytes(length=byte_len, byteorder='big')
+
+        #I ignore the leading zeros in this case.
+        if value[0] != 0x02:
+            raise ValueError('Decryption error')
+
+        #find the interesting message
+        message_offset = None
+        for i in range(1, byte_len):
+            if value[i] == 0x00:
+                message_offset = i
+                break
+
+        if message_offset is None:
+            raise ValueError('Decryption error.')
+
+        if value[message_offset+1] != SymKeyAlgo.TRIPLE_DES.value:
+            raise NotImplementedError('Only triple DES encryption currently implemented.')
+
+        #remove session key checksum
+        message = int.from_bytes(value[message_offset+2:-2], byteorder='big')
+
+        return message
 
 ###############################################################################
 #
@@ -815,3 +851,43 @@ class PGPUserIDPacket(PGPPacket):
             self.raw_data = None
             self.userID = None
            
+###############################################################################
+# 
+###############################################################################  
+
+class PGPSymEncryptedDataPacket(PGPPacket):
+    def __init__(self, packet = None):
+        super().__init__()
+
+        if packet is not None:
+            if packet.header.packet_type != PacketType.SYM_ENCRYPTED_DATA:
+                raise ValueError('Packet must be of symmetrically encrypted data type.')
+
+            self.header = packet.header
+            self.raw_data = packet.raw_data
+            self.encrypted_data = self.raw_data[self.header.header_length:]
+        else:
+            self.header = PGPHeader()
+            self.raw_data = None
+            self.encrypted_data = None
+
+    def to_bytes(self):
+        pass
+
+    def decrypt(self, session_key):
+        session_key_length_bytes = int(192/8)
+        single_key_len = int(session_key_length_bytes / 3)
+
+        session_key = session_key.to_bytes(length=session_key_length_bytes, byteorder='big')
+        
+        key_list = []
+        offset = 0
+        while offset < session_key_length_bytes:
+            key_bytes = session_key[offset:offset+single_key_len]
+            key_bytes = int.from_bytes(key_bytes, byteorder='big')
+            key_list.append(key_bytes)
+            offset += single_key_len
+
+        return bytearray(CFBDecrypt(self.encrypted_data, key_list))[10:]
+
+        

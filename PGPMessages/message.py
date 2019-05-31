@@ -20,12 +20,23 @@ def convert_packet(packet):
         packet = PGPSecretSubkeyPacket(packet = packet)
     elif packet.header.packet_type == PacketType.PK_ENCRYPTED_SESSION_KEY:
         packet = PGPPublicKeyEncryptedSessionKeyPacket(packet = packet)
+    elif packet.header.packet_type == PacketType.SYM_ENCRYPTED_DATA:
+        packet = PGPSymEncryptedDataPacket(packet = packet)
 
     return packet
 
 class PGPMessage():
     def __init__(self):
         self.packets = []
+
+    def from_bytes(self, data_bytes):
+        offset = 0
+
+        while offset < len(data_bytes):
+            packet = PGPPacket(binary_data=data_bytes[offset:])
+            offset += packet.header.get_total_packet_length()
+            packet = convert_packet(packet)
+            self.packets.append(packet)
 
     def open_data_file(self, filename):
 
@@ -69,6 +80,19 @@ class PGPMessage():
 
         return pub_key
 
+    def get_public_subkey(self):
+        pub_subkey = None
+
+        for packet in self.packets:
+            if packet.header.packet_type == PacketType.PUBLIC_SUBKEY:
+                pub_subkey = packet.key
+                break
+            elif packet.header.packet_type == PacketType.SECRET_SUBKEY:
+                pub_subkey = packet.secret_key.pub_key
+                break
+
+        return pub_subkey
+
     def get_user_ID(self):
         uid_packet = None
         for packet in self.packets:
@@ -87,8 +111,27 @@ class PGPMessage():
         for packet in self.packets:
             if packet.header.packet_type == PacketType.SECRET_KEY:
                 secret_key = packet.secret_key
+                break
 
         return secret_key
+
+    def get_secret_subkey(self):
+        secret_subkey = None
+        for packet in self.packets:
+            if packet.header.packet_type == PacketType.SECRET_SUBKEY:
+                secret_subkey = packet.secret_key
+                break
+
+        return secret_subkey
+
+    def get_session_key(self, key_msg):
+        session_key_pckt = None
+        for packet in self.packets:
+            if packet.header.packet_type == PacketType.PK_ENCRYPTED_SESSION_KEY:
+                session_key_pckt = packet
+                break
+
+        return session_key_pckt.decrypt_key(key_msg.get_secret_subkey())
 
     def unpack_message(self, filename):
         for packet in self.packets:
@@ -138,6 +181,21 @@ class PGPMessage():
         self.packets.append(retval)
         self.packets.insert(0, retval.generate_onepass())
 
+    def decrypt_message(self, key_msg):
+        session_key = self.get_session_key(key_msg)
+        
+        enc_packet = None
+        for packet in self.packets:
+            if packet.header.packet_type == PacketType.SYM_ENCRYPTED_DATA:
+                enc_packet = packet
+                break
+
+        if enc_packet is None:
+            print('No encrypted data found.')
+
+        return enc_packet.decrypt(session_key)
+        
+
     def write_gpg_file(self, filename):
         with open(filename, 'wb') as outFile:
             data = bytearray()
@@ -145,6 +203,8 @@ class PGPMessage():
                 data += packet.to_bytes()
 
             outFile.write(data)
+
+
     
         
 
