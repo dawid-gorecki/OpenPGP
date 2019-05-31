@@ -186,6 +186,11 @@ def processBlock(msg, key, encrypt = True):
     return C
 
 def CFBEncrypt(msg: bytes, keys: list, IV = 0, pgpMode = True):
+    """Encrypt msg, in the form of a bytes object, using keys, in the form of a list containing the 3 TDES keys.
+       Set pgpMode to False if using CFB encryption outside of PGP. In that case, supply your own IV.\n
+       Output is a list of 64-bit blocks containing the encrypted data.\n 
+       If using PGP mode, output will be 10 bytes longer because the msg is padded at the beginning with 8 random bytes, with the last 2 bytes being repeated.
+    """
     #set feedback register to Initialization Vector which is 0
     feedbackRegister = 0
     #l = ceil(len(msg)/8)
@@ -267,6 +272,10 @@ def CFBEncrypt(msg: bytes, keys: list, IV = 0, pgpMode = True):
     return cipherBlocks
 
 def CFBDecrypt(msg: bytes, keys: list, IV = 0, pgpMode = True):
+    """ Decrypt msg which is in the form of a bytes object. Keys is a list containing the 3 TDES keys.\n
+        If using CFB decryption outside of PGP, set pgpMode to False and supply your own IV.\n
+        Output is a list of 64-bit blocks containing the decrypted message. 
+    """
     if pgpMode == True:
         l = len(msg)
         msgFromBytes = []
