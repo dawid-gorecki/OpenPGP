@@ -1,8 +1,10 @@
-from .tripleDES import *
+import os, sys
+p = os.getcwd()
+sys.path.append(p)
+from algorithms.tripleDES import *
 import re
-import os
 import math
-file = open('./algorithms/tdesmct/TCFB64Monte3.rsp')
+file = open(p + '/algorithms/tests/TCFB64Monte3.rsp')
 keys = [0,0,0]
 IV = 0
 count = 0

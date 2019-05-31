@@ -1,11 +1,13 @@
-from .DSA import Verify
-
+import os, sys
+p = os.getcwd()
+print(p)
+sys.path.append(p)
+from algorithms.DSA import Verify
 import re
-import os
 import math
 matchFound = False
 testRegex = re.compile(r'(\[.*\])+')
-file = open("SigVer.rsp")
+file = open(p +"/algorithms/tests/SigVer.rsp")
 count = 0
 for line in file:
     if re.match(r'\[mod = L=(1024|2048|3072), N=(160|224|256), SHA-512\]', line)!=None:
@@ -47,6 +49,7 @@ for line in file:
             count += 1
             print("Starting test nr " + str(count))
             MsgBytes = Msg.to_bytes(math.ceil(Msg.bit_length()/8), "big")
+            MsgBytes = bytearray(MsgBytes)
             out = Verify(MsgBytes, P, Q, G, R, S, Y, N)
             if result == out:
                 print("Test nr. " + str(count) + " passed.")
