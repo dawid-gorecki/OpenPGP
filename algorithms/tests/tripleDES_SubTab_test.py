@@ -1,16 +1,21 @@
 import os, sys
-p = os.getcwd()
-sys.path.append(p)
+path = os.path.abspath(os.getcwd())
+sys.path.append(path)
+file_path = path
+if os.name == 'nt':
+    file_path += '\\algorithms\\tests\\TCFB64subtab.rsp'
+elif os.name == 'posix':
+    file_path += '/algorithms/tests/TCFB64subtab.rsp'
 from algorithms.tripleDES import *
 import re
 
-file = open(p + '/algorithms/tests/TCFB64subtab.rsp')
+file = open(file_path)
 keys = [0,0,0]
 IV = 0
 count = 0
 plain = 0
 cipher = 0
-print("Variable Key Known Answer Test")
+print("Substitution Table Test")
 for line in file:
     if count < 19:    
         if re.match(r'KEYs', line) != None:

@@ -15,6 +15,15 @@ class number(Enum):
 
 #def modularMultiplication(a, b, mod):
 
+def sessionKeyChecksum(key):
+    if type(key) != int:
+        raise TypeError('Session key must be an integer')
+    if key.bit_length() > 192:
+        raise ValueError('Session key too long')
+    checksum = 0
+    for i in range(24):
+        checksum += (key & (0xFF << i * 8)) % 65536
+    return checksum     
 
 def modularInverse(z, a):
     if(a > 0 and z > 0 and z < a):

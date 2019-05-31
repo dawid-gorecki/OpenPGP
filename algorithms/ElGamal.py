@@ -1,7 +1,7 @@
 #ElGamal.py
 #Implementation of ElGamal public-key encryption scheme
 
-from .aux import *
+from .auxiliary import *
 import secrets
 
 def OctetsToInteger(oct):

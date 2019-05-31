@@ -1,10 +1,19 @@
 import os, sys
-p = os.getcwd()
-sys.path.append(p)
+path = os.path.abspath(os.getcwd())
+sys.path.append(path)
+file_path = path
+if os.name == 'nt':
+    file_path += '\\algorithms\\tests\\TCFB64Monte3.rsp'
+elif os.name == 'posix':
+    file_path += '/algorithms/tests/TCFB64Monte3.rsp'
 from algorithms.tripleDES import *
 import re
+import cProfile
+import io
+import pstats
+from pstats import SortKey
 import math
-file = open(p + '/algorithms/tests/TCFB64Monte3.rsp')
+file = open(file_path)
 keys = [0,0,0]
 IV = 0
 count = 0
@@ -32,6 +41,8 @@ for line in file:
             cipher = int("0x" + line[13:30], 16)
             x = 0
             c = []
+            pr = cProfile.Profile()
+            pr.enable()
             for i in range(10000):
                 out = CFBEncrypt(plain.to_bytes(8, "big"), keys, IV, False)
                 x = 0
@@ -40,13 +51,19 @@ for line in file:
                 c.append(x)
                 plain = IV
                 IV = x
-            
+            pr.disable()
+            s = io.StringIO()
+            sortby = SortKey.CUMULATIVE
+            ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+            ps.print_stats()
+            print(s.getvalue())
             for i in range(3):
                 keys[i] = keys[i] ^ c[9999-i]
             
             IV = x
             if(x != cipher):
                 print("test nr " + str(count) + " failed!")
+                break
             count += 1
     else:
         if not initializedDecrypt:

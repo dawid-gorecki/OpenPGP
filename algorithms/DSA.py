@@ -1,6 +1,6 @@
 #DSA.py
 #implementation of the Digital Signature Algorithm
-from .aux import *
+from .auxiliary import *
 from .SHA512 import Hash
 import secrets
 #this enum determines the four choices of bit lengths of p and q which may be used

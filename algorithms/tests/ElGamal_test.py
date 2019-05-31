@@ -1,12 +1,16 @@
 import os, sys
-p = os.getcwd()
-print(p)
-sys.path.append(p)
+path = os.path.abspath(os.getcwd())
+sys.path.append(path)
+file_path = path
+if os.name == 'nt':
+    file_path += '\\algorithms\\tests\\elgamal_test_vectors.csv'
+elif os.name == 'posix':
+    file_path += '/algorithms/tests/elgamal_test_vectors.csv'
 #test vectors are taken from
 #https://gist.github.com/devinrsmith/58926b3d62ccfe9818057f94d2c7189c#file-elgamal_test_vectors-csv
 from algorithms.ElGamal import *
-from algorithms.aux import *
-file = open(p + '/algorithms/tests/elgamal_test_vectors.csv')
+from algorithms.auxiliary import *
+file = open(file_path)
 count = 1
 for line in file:
     vals = line.split(',')
