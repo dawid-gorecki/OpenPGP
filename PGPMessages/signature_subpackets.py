@@ -35,6 +35,8 @@ def convert_subpckt(subpckt):
         subpckt = PGPSigCreationSubPckt(subPckt = subpckt)
     elif subpckt.header.subpacket_type == SubPacketType.SIGNERS_USER_ID:
         subpckt = PGPSignerUIDSubPckt(subPckt = subpckt)
+    elif subpckt.header.subpacket_type == SubPacketType.ISSUER_FINGERPRINT:
+        subpckt = PGPFingerprintSubPckt(subPckt = subpckt)
 
     return subpckt
 
@@ -225,3 +227,41 @@ class PGPSignerUIDSubPckt(PGPSignatureSubPckt):
         ret_bytes += self.userID.encode('ascii')
         return ret_bytes
 
+
+###############################################################################
+# 
+############################################################################### 
+
+class PGPFingerprintSubPckt(PGPSignatureSubPckt):
+    def __init__(self, subPckt = None):
+        super().__init__()
+
+        if subPckt is not None:
+            self.header = subPckt.header
+
+            if self.header.subpacket_type != SubPacketType.ISSUER_FINGERPRINT:
+                raise ValueError('Subpacket must have fingerprint type.')
+
+            self.raw_data = subPckt.raw_data
+
+            self.fingerprint_version = self.raw_data[self.header.get_header_length()]
+            
+            offset = self.header.get_header_length() + 1
+            self.fingerprint = int.from_bytes(self.raw_data[offset:offset+20], byteorder='big')
+        else:
+            self.header = PGPSignatureSubPcktHeader()
+            self.raw_data = None
+            self.fingerprint_version = 4
+            self.fingerprint = None
+
+    def generate_header(self):
+        self.header.subpacket_type = SubPacketType.ISSUER_FINGERPRINT
+        length = 1 + 20
+        self.header.set_length(length)
+
+    def to_bytes(self):
+        ret_bytes = bytearray()
+        ret_bytes += self.header.to_bytes()
+        ret_bytes += self.fingerprint_version.to_bytes(length=4, byteorder='big')
+        ret_bytes += self.fingerprint.to_bytes(byteorder='big', length=1)
+        return ret_bytes

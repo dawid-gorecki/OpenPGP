@@ -61,6 +61,19 @@ class PGPMessage():
 
         return pub_key
 
+    def get_user_ID(self):
+        uid_packet = None
+        for packet in self.packets:
+            if packet.header.packet_type == PacketType.USER_ID:
+                uid_packet = packet
+                break
+
+        if uid_packet is None:
+            raise RuntimeError('User ID packet not found.')
+
+        return uid_packet.userID
+        
+
     def get_secret_key(self):
         secret_key = None
         for packet in self.packets:

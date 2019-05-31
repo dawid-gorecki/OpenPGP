@@ -586,8 +586,9 @@ class PGPLiteralDataPacket(PGPPacket):
         
         self.generate_header()
 
-    def sign(self):
+    def sign(self, secret_key, user_id):
         sig_packet = PGPSignaturePacket()
+
         data_to_sign = bytearray()
         data_to_sign += self.file_content
         
@@ -603,5 +604,21 @@ class PGPLiteralDataPacket(PGPPacket):
         return ret_str
 
        
-            
+###############################################################################
+#
+###############################################################################
+
+
+class PGPUserIDPacket(PGPPacket):
+    def __init__(self, packet = None):
+        super().__init__()
+
+        if packet is not None:
+            self.header = packet.header
+            self.raw_data = packet.raw_data
+            self.userID = self.raw_data[self.header.header_length:self.header.get_total_packet_length()].decode('utf-8')
+        else:
+            self.header = PGPHeader()
+            self.raw_data = None
+            self.userID = None
            
