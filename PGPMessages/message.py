@@ -14,6 +14,8 @@ def convert_packet(packet):
         packet = PGPPublicKeyPacket(packet = packet)
     elif packet.header.packet_type == PacketType.USER_ID:
         packet = PGPUserIDPacket(packet = packet)
+    elif packet.header.packet_type == PacketType.PUBLIC_SUBKEY:
+        packet = PGPPublicSubkeyPacket(packet = packet)
 
     return packet
 

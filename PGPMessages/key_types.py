@@ -84,3 +84,48 @@ class DSASecretKey():
 
         return x_bytes + 2
 
+class ElGamalPublicKey():
+    def __init__(self):
+        self.fingerprint = None
+        self.p_bits = None
+        self.p_value = None
+        self.g_bits = None
+        self.g_value = None
+        self.y_bits = None
+        self.y_value = None
+
+    def parse_binary(self, binary_data):
+        bytes_needed = lambda a: math.ceil(a / 8)
+        
+        self.p_bits = int.from_bytes(binary_data[0:2], byteorder='big')
+        p_bytes = bytes_needed(self.p_bits)
+        self.p_value = int.from_bytes(binary_data[2:2+p_bytes], byteorder='big')
+        offset = 2 + p_bytes
+
+        self.g_bits = int.from_bytes(binary_data[offset:offset+2], byteorder='big')
+        offset += 2
+        g_bytes = bytes_needed(self.g_bits)
+        self.g_value = int.from_bytes(binary_data[offset:offset+g_bytes], byteorder='big')
+        offset += g_bytes
+
+        self.y_bits = int.from_bytes(binary_data[offset:offset+2], byteorder='big')
+        offset += 2
+        y_bytes = bytes_needed(self.y_bits)
+        self.y_value = int.from_bytes(binary_data[offset:offset+y_bytes], byteorder='big')
+
+        return p_bytes + g_bytes + y_bytes + 6
+
+    def to_bytes(self):
+        bytes_needed = lambda a: math.ceil(a / 8)
+
+        ret_bytes = bytearray()
+        ret_bytes += self.p_bits.to_bytes(length=2, byteorder='big')
+        ret_bytes += self.p_value.to_bytes(length=bytes_needed(self.p_bits), byteorder='big')
+
+        ret_bytes += self.g_bits.to_bytes(length=2, byteorder='big')
+        ret_bytes += self.g_value.to_bytes(length=bytes_needed(self.g_bits), byteorder='big')
+        
+        ret_bytes += self.y_bits.to_bytes(length=2, byteorder='big')
+        ret_bytes += self.y_value.to_bytes(length=bytes_needed(self.y_bits), byteorder='big')
+
+        return ret_bytes

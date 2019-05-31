@@ -118,6 +118,65 @@ class PGPPublicKeyPacket(PGPPacket):
 #
 ###############################################################################
 
+class PGPPublicSubkeyPacket(PGPPacket):
+    def __init__(self, packet = None):
+        super().__init__()
+
+        if packet is not None:
+            if packet.header.packet_type != PacketType.PUBLIC_SUBKEY:
+                raise ValueError('Packet must be of public subkey type.')
+
+            #copy values    
+            self.header = packet.header
+            self.raw_data = packet.raw_data
+
+            #set offset for the rest of parsing
+            offset = self.header.header_length
+            #packet version (should be 4)
+            self.version = self.raw_data[offset]
+            if self.version != 4:
+                raise NotImplementedError('Only version 4 packets implemented.')
+            
+            offset += 1
+            #time of creation
+            self.time_created = int.from_bytes(self.raw_data[offset : offset+4], byteorder='big')
+            offset += 4
+            #public key algorithm (currently only Elgamal supported)
+            self.public_key_algo = PublicKeyAlgo(self.raw_data[offset])
+            offset += 1
+
+            #parse key
+            self.key = None
+            if self.public_key_algo == PublicKeyAlgo.ELGAMAL_ENCRYPT_ONLY:
+                self.key = ElGamalPublicKey()
+                self.key.parse_binary(self.raw_data[offset:])
+            else:
+                raise NotImplementedError('Only DSA public keys implemented for now.')
+
+            self.key.fingerprint = self.get_fingerprint()
+
+        else:
+            #default values
+            raise NotImplementedError('Creating new public key packets not implemented.')
+            self.header = PGPHeader()
+            self.raw_data = None
+            self.version = None
+            self.time_created = None
+            self.public_key_algo = None
+            self.key = None
+
+    def get_fingerprint(self):
+        val_to_hash = bytearray()
+        val_to_hash += b'\x99'
+        val_to_hash += self.header.packet_length.to_bytes(length=2, byteorder='big')
+        val_to_hash += self.raw_data[self.header.header_length:]
+        h = hashlib.sha1(val_to_hash).digest()
+        return int.from_bytes(h, byteorder='big')
+
+###############################################################################
+#
+###############################################################################
+
 class PGPPublicKeyEncryptedSessionKeyPacket(PGPPacket):
     def __init__(self, packet = None):
         super().__init__()
