@@ -129,3 +129,18 @@ class ElGamalPublicKey():
         ret_bytes += self.y_value.to_bytes(length=bytes_needed(self.y_bits), byteorder='big')
 
         return ret_bytes
+
+class ElGamalSecretKey():
+    def __init__(self):
+        self.pub_key = None
+        self.x_bits = None
+        self.x_value = None
+
+    def parse_binary(self, binary_data):
+        bytes_needed = lambda a: math.ceil(a / 8)
+
+        self.x_bits = int.from_bytes(binary_data[0:2], byteorder='big')
+        x_bytes = bytes_needed(self.x_bits)
+        self.x_value = int.from_bytes(binary_data[2:2+x_bytes], byteorder='big')
+
+        return x_bytes + 2

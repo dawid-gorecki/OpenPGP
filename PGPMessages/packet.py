@@ -276,6 +276,80 @@ class PGPSecretKeyPacket(PGPPacket):
         h = hashlib.sha1(val_to_hash).digest()
         return int.from_bytes(h, byteorder='big')
 
+###############################################################################
+#
+###############################################################################
+
+class PGPSecretSubkeyPacket(PGPPacket):
+    def __init__(self, packet = None):
+        super().__init__()
+
+        if packet is not None:
+            if packet.header.packet_type != PacketType.SECRET_SUBKEY:
+                raise ValueError('Packet must be of secret key type.')
+            
+            self.header = packet.header
+            self.raw_data = packet.raw_data
+
+            offset = self.header.header_length
+
+            self.version = self.raw_data[offset]
+            offset += 1
+            if self.version != 4:
+                raise NotImplementedError('Only version 4 packets now implemented.')
+
+            self.time_created = int.from_bytes(self.raw_data[offset:offset+4], byteorder='big')
+            offset += 4
+
+            self.public_key_algo = PublicKeyAlgo(self.raw_data[offset])
+            offset += 1
+
+            public_key = None
+
+            if self.public_key_algo == PublicKeyAlgo.ELGAMAL_ENCRYPT_ONLY:
+                public_key = ElGamalPublicKey()
+                offset += public_key.parse_binary(self.raw_data[offset:])
+
+            else:
+                raise NotImplementedError('Only DSA keys currently implemented.')
+            
+            self.s2k_convention = self.raw_data[offset]
+            if self.s2k_convention != 0:
+                raise NotImplementedError('No secret key encryption supported.')
+
+            offset += 1
+
+            self.secret_key = ElGamalSecretKey()
+            self.secret_key.pub_key = public_key
+            offset += self.secret_key.parse_binary(self.raw_data[offset:])
+            
+            if len(self.raw_data[offset:]) != 2:
+                raise ValueError('Checksum too long.')
+
+            self.checksum = int.from_bytes(self.raw_data[offset:], byteorder='big')
+            self.secret_key.pub_key.fingerprint=self.get_fingerprint()
+        else:
+            raise NotImplementedError('Secret key creation not implemented.')
+
+    def get_fingerprint(self):
+        val_to_hash = bytearray()
+        #value needed for hashing
+        val_to_hash += b'\x99'
+        #store public key in temporary variable
+        tmp_key = self.secret_key.pub_key.to_bytes()
+        #length of version, creation time and public key algorithm fields
+        tmp_len = 6
+        tmp_len += len(tmp_key)
+
+        #create value for hashing
+        val_to_hash += tmp_len.to_bytes(length=2, byteorder='big')
+        val_to_hash += self.version.to_bytes(length=1, byteorder='big')
+        val_to_hash += self.time_created.to_bytes(length=4, byteorder='big')
+        val_to_hash += self.public_key_algo.value.to_bytes(length=1, byteorder='big')
+        val_to_hash += tmp_key
+
+        h = hashlib.sha1(val_to_hash).digest()
+        return int.from_bytes(h, byteorder='big')
 
 ###############################################################################
 #
