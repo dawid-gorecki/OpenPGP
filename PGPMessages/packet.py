@@ -393,8 +393,12 @@ class PGPSignaturePacket(PGPPacket):
         data_to_verify += b'\x04\xff'
         data_to_verify += hash_len.to_bytes(length=4, byteorder='big')
 
-        return Verify(data_to_verify, key.p_value, key.q_value, key.g_value,
+        
+
+        retval = Verify(data_to_verify, key.p_value, key.q_value, key.g_value,
             self.signature.signed_r, self.signature.signed_s, key.y_value, key.q_bits)
+
+        return retval
 
     def calculate_subpacket_lengths(self):
         unhashed_len = 0
@@ -627,7 +631,6 @@ class PGPLiteralDataPacket(PGPPacket):
         data_to_sign += sig_partial
         data_to_sign += b'\x04\xff'
         data_to_sign += partial_length.to_bytes(length=4, byteorder='big')
-        
 
         sig_packet.hashed_value_left_bits = Hash(data_to_sign).to_bytes(length=64, byteorder='big')[0:2]
         
