@@ -49,7 +49,7 @@ class PGPSignatureSubPcktHeader():
             elif binary_data[0] > 192 and binary_data[0] < 255:
                 self.subpacket_length = ((binary_data[0] - 192) << 8) + (binary_data[1]) + 192
                 self.length_of_length = 2
-            elif binary_data[1] == 255:
+            elif binary_data[0] == 255:
                 self.subpacket_length = int.from_bytes(binary_data[1:5], byteorder='big')
                 self.length_of_length = 5
             else:
