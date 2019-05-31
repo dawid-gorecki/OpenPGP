@@ -1,10 +1,15 @@
 import os, sys
-p = os.getcwd()
-sys.path.append(p)
+path = os.path.abspath(os.getcwd())
+sys.path.append(path)
+file_path = path
+if os.name == 'nt':
+    file_path += '\\algorithms\\tests\\TCFB64MMT2.rsp'
+elif os.name == 'posix':
+    file_path += '/algorithms/tests/TCFB64MMT2.rsp'
 from algorithms.tripleDES import *
 import re
 import math
-file = open(p + '/algorithms/tests/TCFB64MMT2.rsp')
+file = open(file_path)
 keys = [0,0,0]
 IV = 0
 count = 0
