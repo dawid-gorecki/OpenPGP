@@ -26,7 +26,7 @@ class DSA_Signature():
 
 
     def to_bytes(self):
-        bytes_needed = lambda x: math.celi(x / 8)
+        bytes_needed = lambda x: math.ceil(x / 8)
 
         return_bytes = bytearray()
 
@@ -36,6 +36,6 @@ class DSA_Signature():
 
         return_bytes += self.signed_s_bits.to_bytes(length=2, byteorder='big')
         s_bytes = bytes_needed(self.signed_s_bits)
-        return_bytes += self.signed_s(length=s_bytes, byteorder = 'big')
+        return_bytes += self.signed_s.to_bytes(length=s_bytes, byteorder = 'big')
 
         return return_bytes

@@ -5,6 +5,7 @@
 
 import sys
 import math
+import copy
 #circular right shift
 #this function assumes 64 bit values
 def ror(value, amount):
@@ -28,8 +29,8 @@ def deltaOne(x):
 
 #Calculate a SHA-512 hash of the input bytes or byterray object
 #@profile
-def Hash(msg: bytearray):
-
+def Hash(msgx: bytearray):
+    msg = copy.deepcopy(msgx)
     #initialize hash values
     #these initial values are defined as the first sixty-four bits of the
     #fractional parts of the square roots of the first eight prime numbers

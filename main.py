@@ -8,6 +8,7 @@ def main():
     parser.add_argument('--infile', required=True, help='Input file.', type=str)
     parser.add_argument('--verify', action='store_true')
     parser.add_argument('--list-packets', action='store_true')
+    parser.add_argument('--sign', action='store_true')
     args = parser.parse_args()
     if args.verify:
         if args.key is None:
@@ -26,6 +27,10 @@ def main():
         msg = PGPMessage()
         msg.open_pgp_file(args.infile)
         msg.list_packets()
+    elif args.sign:
+        msg = PGPMessage()
+        msg.open_data_file(args.infile)
+        msg.sign_message()
 
 if __name__=='__main__':
     main()

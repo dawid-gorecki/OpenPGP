@@ -2,6 +2,7 @@ import math
 
 class DSAPublicKey():
     def __init__(self):
+        self.fingerprint = None
         self.p_bits = None
         self.p_value = None
         self.q_bits = None

@@ -112,7 +112,6 @@ class PGPHeader():
 
         return retVal
 
-
     def __str__(self):
         ret_str = '\n----HEADER----\n'
         ret_str += 'Packet format: ' + str(self.packet_format)
