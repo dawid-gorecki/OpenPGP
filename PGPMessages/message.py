@@ -18,6 +18,8 @@ def convert_packet(packet):
         packet = PGPPublicSubkeyPacket(packet = packet)
     elif packet.header.packet_type == PacketType.SECRET_SUBKEY:
         packet = PGPSecretSubkeyPacket(packet = packet)
+    elif packet.header.packet_type == PacketType.PK_ENCRYPTED_SESSION_KEY:
+        packet = PGPPublicKeyEncryptedSessionKeyPacket(packet = packet)
 
     return packet
 

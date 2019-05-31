@@ -144,3 +144,27 @@ class ElGamalSecretKey():
         self.x_value = int.from_bytes(binary_data[2:2+x_bytes], byteorder='big')
 
         return x_bytes + 2
+
+class ElGamalEncryptedSessionKey():
+    def __init__(self):
+        self.gkmodp_bits = None
+        self.gkmodp_value = None
+        self.mykmodp_bits = None
+        self.mykmodp_value = None
+
+    def parse_binary(self, binary_data):
+        bytes_needed = lambda a: math.ceil(a / 8)
+
+        self.gkmodp_bits = int.from_bytes(binary_data[0:2], byteorder='big')
+        gkmodp_bytes = bytes_needed(self.gkmodp_bits)
+        self.gkmodp_value = int.from_bytes(binary_data[2:2+gkmodp_bytes], byteorder='big')
+        offset = 2 + gkmodp_bytes
+
+        self.mykmodp_bits = int.from_bytes(binary_data[offset:offset+2], byteorder='big')
+        mykmodp_bytes = bytes_needed(self.mykmodp_bits)
+        offset += 2
+        self.mykmodp_value = int.from_bytes(binary_data[offset:offset+mykmodp_bytes], byteorder='big')
+        offset += mykmodp_bytes
+
+        return gkmodp_bytes + mykmodp_bytes + 4
+        

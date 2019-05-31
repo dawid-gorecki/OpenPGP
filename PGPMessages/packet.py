@@ -183,6 +183,8 @@ class PGPPublicKeyEncryptedSessionKeyPacket(PGPPacket):
 
         if packet is not None:
             self.header = packet.header
+            if self.header.packet_type != PacketType.PK_ENCRYPTED_SESSION_KEY:
+                raise ValueError('Packet must have public key encrypted session key packet type.')
             self.raw_data = packet.raw_data
             offset = self.header.header_length
             self.version = self.raw_data[offset]
@@ -191,7 +193,8 @@ class PGPPublicKeyEncryptedSessionKeyPacket(PGPPacket):
             offset += 8
             self.pub_key_algo = PublicKeyAlgo(self.raw_data[offset])
             offset += 1
-            self.enc_key = self.raw_data[offset:]
+            self.enc_key = ElGamalEncryptedSessionKey()
+            self.enc_key.parse_binary(self.raw_data[offset:])
         else:
             self.header = PGPHeader()
             self.raw_data = None
