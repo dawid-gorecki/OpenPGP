@@ -2,6 +2,7 @@ from .packet import *
 from .header import PacketType
 from algorithms.tripleDES import CFBEncrypt, CFBDecrypt
 from algorithms.ElGamal import Encrypt
+from algorithms.auxiliary import sessionKeyChecksum
 from secrets import randbits
 
 def convert_packet(packet):
@@ -220,7 +221,63 @@ class PGPMessage():
 
         enc_data = bytearray(CFBEncrypt(data, keys))
 
-        enc_data = int.from_bytes(enc_data, byteorder='big')
+        enc_packet = PGPSymEncryptedDataPacket()
+        enc_packet.encrypted_data = enc_data
+        enc_packet.generate_header()
+
+        session_key = bytearray()
+        for i in keys:
+            session_key += i.to_bytes(length=8, byteorder='big')
+
+        checksum = sessionKeyChecksum((int.from_bytes(session_key, byteorder='big')))
+
+        session_key += checksum.to_bytes(length=2, byteorder='big')
+        session_key.insert(0, 2)
+        session_key.insert(0, 0)
+
+        k = math.ceil(public_key.p_bits / 8)
+        mlen = len(session_key)
+        
+        if mlen > k - 11:
+            raise ValueError('Message too long.')
+
+        for i in range(k - mlen - 2):
+            randval = 0
+            while randval == 0:
+                randval = randbits(8)
+            session_key.insert(0, randval)
+
+        session_key.insert(0, 0x02)
+        session_key.insert(0, 0)
+
+        encrypted_key = ElGamalEncryptedSessionKey()
+        print(session_key)
+        
+        ciphertext = Encrypt(int.from_bytes(session_key, byteorder='big'), public_key.p_value,
+            public_key.g_value, public_key.y_value)
+
+        encrypted_key.gkmodp_value = ciphertext[0]
+        encrypted_key.mykmodp_value = ciphertext[1]
+        encrypted_key.gkmodp_bits = ciphertext[0].bit_length()
+        encrypted_key.mykmodp_bits = ciphertext[1].bit_length()
+
+        encrypted_key_packet = PGPPublicKeyEncryptedSessionKeyPacket()
+        encrypted_key_packet.keyID = int.from_bytes(public_key.fingerprint.to_bytes(length=20, byteorder='big')[-8:],
+            byteorder='big')
+        encrypted_key_packet.enc_key = encrypted_key
+        encrypted_key_packet.pub_key_algo = PublicKeyAlgo.ELGAMAL_ENCRYPT_ONLY
+        encrypted_key_packet.generate_header()
+
+        ret_msg = PGPMessage()
+        ret_msg.packets.append(encrypted_key_packet)
+        ret_msg.packets.append(enc_packet)
+
+        return ret_msg
+
+
+        
+
+        
         
         
 
