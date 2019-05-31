@@ -1,13 +1,17 @@
 import os, sys
-p = os.getcwd()
-print(p)
-sys.path.append(p)
+path = os.path.abspath(os.getcwd())
+sys.path.append(path)
+file_path = path
+if os.name == 'nt':
+    file_path += '\\algorithms\\tests\\SigVer.rsp'
+elif os.name == 'posix':
+    file_path += '/algorithms/tests/SigVer.rsp'
 from algorithms.DSA import Verify
 import re
 import math
 matchFound = False
 testRegex = re.compile(r'(\[.*\])+')
-file = open(p +"/algorithms/tests/SigVer.rsp")
+file = open(file_path)
 count = 0
 for line in file:
     if re.match(r'\[mod = L=(1024|2048|3072), N=(160|224|256), SHA-512\]', line)!=None:

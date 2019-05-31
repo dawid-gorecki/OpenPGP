@@ -30,6 +30,9 @@ def deltaOne(x):
 #Calculate a SHA-512 hash of the input bytes or byterray object
 #@profile
 def Hash(msgx: bytearray):
+    """Calculates SHA-512 hash of supplied bytearray object.\n
+        Return value is 512-bit integer representing the hashed input message.
+    """
     msg = copy.deepcopy(msgx)
     #initialize hash values
     #these initial values are defined as the first sixty-four bits of the
