@@ -206,6 +206,24 @@ class PGPPublicKeyEncryptedSessionKeyPacket(PGPPacket):
             self.pub_key_algo = None
             self.enc_key = None
 
+    def to_bytes(self):
+        ret_bytes = bytearray()
+        ret_bytes += self.header.to_bytes()
+        ret_bytes += self.version.to_bytes(length=1, byteorder='big')
+        ret_bytes += self.keyID.to_bytes(length=8, byteorder='big')
+        ret_bytes += self.pub_key_algo.value.to_bytes(length=1, byteorder='big')
+        ret_bytes += self.enc_key.to_bytes()
+
+        return ret_bytes
+
+    def generate_header(self):
+        self.header.packet_type = PacketType.PK_ENCRYPTED_SESSION_KEY
+        #key ID, version, public key algorithm
+        length = 10
+        #key length
+        length += self.enc_key.get_total_key_length()
+        self.header.set_length(length)
+
     def decrypt_key(self, key):
         if not isinstance(key, ElGamalSecretKey):
             raise TypeError('Key must be of elgamal secret key type.')

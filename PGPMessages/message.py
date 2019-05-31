@@ -1,5 +1,8 @@
 from .packet import *
 from .header import PacketType
+from algorithms.tripleDES import CFBEncrypt, CFBDecrypt
+from algorithms.ElGamal import Encrypt
+from secrets import randbits
 
 def convert_packet(packet):
     if packet.header.packet_type == PacketType.LITERAL_DATA:
@@ -203,6 +206,28 @@ class PGPMessage():
                 data += packet.to_bytes()
 
             outFile.write(data)
+
+    def encrypt_message(self, key_msg):
+        public_key = key_msg.get_public_subkey()
+
+        data = bytearray()
+        for packet in self.packets:
+            data += packet.to_bytes()
+
+        keys = []
+        for i in range(3):
+            keys.append(randbits(64))
+
+        enc_data = bytearray(CFBEncrypt(data, keys))
+
+        enc_data = int.from_bytes(enc_data, byteorder='big')
+        
+        
+
+
+        
+
+        
 
 
     

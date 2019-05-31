@@ -167,4 +167,22 @@ class ElGamalEncryptedSessionKey():
         offset += mykmodp_bytes
 
         return gkmodp_bytes + mykmodp_bytes + 4
+
+    def to_bytes(self):
+        ret_bytes = bytearray()
+        ret_bytes += self.gkmodp_bits.to_bytes(length=2, byteorder='big')
+        gkmodp_bytes = math.ceil(self.gkmodp_bits / 8)
+        ret_bytes += self.gkmodp_value(length=gkmodp_bytes, byteorder='big')
+        
+        ret_bytes += self.mykmodp_bits(length=2, byteorder='big')
+        mykmodp_bytes = math.ceil(self.mykmodp_bits / 8)
+        ret_bytes += self.mykmodp_value(length=mykmodp_bytes, byteorder='big')
+
+        return ret_bytes
+
+    def get_total_key_length(self):
+        gkmod_bytes = math.ceil(self.gkmodp_bits / 8)
+        mykmod_bytes = math.ceil(self.mykmodp_bits / 8)
+
+        return gkmod_bytes + mykmod_bytes + 4
         

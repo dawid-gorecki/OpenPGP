@@ -244,8 +244,13 @@ def CFBEncrypt(msg: bytes, keys: list, IV = 0, pgpMode = True):
                 for j in range(8):
                     feedbackRegister |= (cipherBlocks[(8*i+18) + j] << (56 - j * 8))
                 feedbackRegisterEncrypted = encryptBlock(feedbackRegister, keys)
-                feedbackRegisterEncrypted ^= msgFromBytes[i + 2]
+                if msgFromBytes[i+2].bit_length() < 56:
+                    feedbackRegisterEncrypted ^= msgFromBytes[i + 2] << (64 - msgFromBytes[i+2].bit_length())
+                else:
+                    feedbackRegisterEncrypted ^= msgFromBytes[i + 2]
                 for j in range(8):
+                    if (8*(i+1) + 18 + j) >= (len(msg)+10):
+                        break
                     cipherBlocks[8*(i+1) + 18 + j] = (feedbackRegisterEncrypted & (0xFF << (56 - j * 8))) >> (56 - j * 8)
     else:
         cipherBlocks = [0 for i in range(len(msg))]
