@@ -172,11 +172,11 @@ class ElGamalEncryptedSessionKey():
         ret_bytes = bytearray()
         ret_bytes += self.gkmodp_bits.to_bytes(length=2, byteorder='big')
         gkmodp_bytes = math.ceil(self.gkmodp_bits / 8)
-        ret_bytes += self.gkmodp_value(length=gkmodp_bytes, byteorder='big')
+        ret_bytes += self.gkmodp_value.to_bytes(length=gkmodp_bytes, byteorder='big')
         
-        ret_bytes += self.mykmodp_bits(length=2, byteorder='big')
+        ret_bytes += self.mykmodp_bits.to_bytes(length=2, byteorder='big')
         mykmodp_bytes = math.ceil(self.mykmodp_bits / 8)
-        ret_bytes += self.mykmodp_value(length=mykmodp_bytes, byteorder='big')
+        ret_bytes += self.mykmodp_value.to_bytes(length=mykmodp_bytes, byteorder='big')
 
         return ret_bytes
 

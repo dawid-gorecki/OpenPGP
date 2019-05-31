@@ -12,7 +12,7 @@ def OctetsToInteger(oct):
     return x
 
 
-def Encrypt(msg, p, g, y, k):
+def Encrypt(msg, p, g, y, k=0):
     m = msg
     while(k == 0):
         k = secrets.randbelow(p-2)
